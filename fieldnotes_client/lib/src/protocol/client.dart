@@ -299,9 +299,9 @@ class EndpointSync extends _isc.EndpointRef {
 
   /// Returns changes after [cursor], oldest first, at most [limit] per kind.
   _ida.Future<_idyhpftd.SyncPullResult> pull(
-    int cursor, {
-    required int limit,
-  }) => caller.callServerEndpoint<_idyhpftd.SyncPullResult>(
+    int cursor,
+    int limit,
+  ) => caller.callServerEndpoint<_idyhpftd.SyncPullResult>(
     'sync',
     'pull',
     {

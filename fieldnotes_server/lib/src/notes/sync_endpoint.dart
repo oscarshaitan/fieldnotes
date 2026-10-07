@@ -132,9 +132,9 @@ class SyncEndpoint extends Endpoint {
   /// Returns changes after [cursor], oldest first, at most [limit] per kind.
   Future<SyncPullResult> pull(
     Session session,
-    int cursor, {
-    int limit = 200,
-  }) async {
+    int cursor,
+    int limit,
+  ) async {
     final userId = _userId(session);
     limit = limit.clamp(1, 500);
 

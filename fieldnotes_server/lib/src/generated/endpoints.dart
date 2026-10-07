@@ -325,7 +325,7 @@ class Endpoints extends _is.EndpointDispatch {
               ) async => (endpoints['sync'] as _il6him71.SyncEndpoint).pull(
                 session,
                 params['cursor'],
-                limit: params['limit'],
+                params['limit'],
               ),
         ),
         'beginPhotoUpload': _is.MethodConnector(

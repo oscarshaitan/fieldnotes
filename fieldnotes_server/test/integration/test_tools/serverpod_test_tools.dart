@@ -598,9 +598,9 @@ class _SyncEndpoint {
 
   _ida.Future<_iglau8gu.SyncPullResult> pull(
     _ist.TestSessionBuilder sessionBuilder,
-    int cursor, {
-    required int limit,
-  }) async {
+    int cursor,
+    int limit,
+  ) async {
     return _ist.callAwaitableFunctionAndHandleExceptions(() async {
       var _localUniqueSession =
           (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
