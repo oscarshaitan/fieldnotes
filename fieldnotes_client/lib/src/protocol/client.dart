@@ -11,8 +11,16 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
+import 'dart:typed_data' as _idt;
 import 'package:fieldnotes_client/src/protocol/greetings/greeting.dart'
     as _ip7pdgaq;
+import 'package:fieldnotes_client/src/protocol/notes/note_change.dart'
+    as _ipbq5bis;
+import 'package:fieldnotes_client/src/protocol/notes/note_change_result.dart'
+    as _iouscab8;
+import 'package:fieldnotes_client/src/protocol/notes/photo.dart' as _i5rb9t65;
+import 'package:fieldnotes_client/src/protocol/notes/sync_pull_result.dart'
+    as _idyhpftd;
 import 'package:http/http.dart' as _i85jenna;
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
     as _iacc;
@@ -266,6 +274,86 @@ class EndpointGreeting extends _isc.EndpointRef {
       );
 }
 
+/// Offline-first sync API: devices push their local edits, and pull everything
+/// that changed since their cursor.
+///
+/// Conflict handling is optimistic: every edit carries the revision (and
+/// content) it was based on. If the note moved on in the meantime the server
+/// merges the two edits field by field, line by line; if both touched the same
+/// lines the client gets a `conflict` and lets the user decide.
+/// {@category Endpoint}
+class EndpointSync extends _isc.EndpointRef {
+  EndpointSync(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'sync';
+
+  /// Applies one local edit to the server copy of a note.
+  _ida.Future<_iouscab8.NoteChangeResult> pushNote(
+    _ipbq5bis.NoteChange change,
+  ) => caller.callServerEndpoint<_iouscab8.NoteChangeResult>(
+    'sync',
+    'pushNote',
+    {'change': change},
+  );
+
+  /// Returns changes after [cursor], oldest first, at most [limit] per kind.
+  _ida.Future<_idyhpftd.SyncPullResult> pull(
+    int cursor, {
+    required int limit,
+  }) => caller.callServerEndpoint<_idyhpftd.SyncPullResult>(
+    'sync',
+    'pull',
+    {
+      'cursor': cursor,
+      'limit': limit,
+    },
+  );
+
+  /// Step 1 of a photo upload. The note must already exist on the server.
+  /// Returns the upload description for [FileUploader].
+  _ida.Future<String> beginPhotoUpload({
+    required _isc.UuidValue photoId,
+    required _isc.UuidValue noteId,
+    required String mimeType,
+    required int byteSize,
+  }) => caller.callServerEndpoint<String>(
+    'sync',
+    'beginPhotoUpload',
+    {
+      'photoId': photoId,
+      'noteId': noteId,
+      'mimeType': mimeType,
+      'byteSize': byteSize,
+    },
+  );
+
+  /// Step 2: after the bytes are uploaded, verify them and publish the photo
+  /// to the user's other devices.
+  _ida.Future<_i5rb9t65.Photo> completePhotoUpload(_isc.UuidValue photoId) =>
+      caller.callServerEndpoint<_i5rb9t65.Photo>(
+        'sync',
+        'completePhotoUpload',
+        {'photoId': photoId},
+      );
+
+  /// Removes a photo; the deletion propagates to other devices on pull.
+  _ida.Future<void> deletePhoto(_isc.UuidValue photoId) =>
+      caller.callServerEndpoint<void>(
+        'sync',
+        'deletePhoto',
+        {'photoId': photoId},
+      );
+
+  /// Downloads the bytes of a photo.
+  _ida.Future<_idt.ByteData> getPhotoData(_isc.UuidValue photoId) =>
+      caller.callServerEndpoint<_idt.ByteData>(
+        'sync',
+        'getPhotoData',
+        {'photoId': photoId},
+      );
+}
+
 class Modules {
   Modules(Client client) {
     serverpod_auth_idp = _iaic.Caller(client);
@@ -307,6 +395,7 @@ class Client extends _isc.ServerpodClientShared {
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
     greeting = EndpointGreeting(this);
+    sync = EndpointSync(this);
     modules = Modules(this);
   }
 
@@ -316,6 +405,8 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointGreeting greeting;
 
+  late final EndpointSync sync;
+
   late final Modules modules;
 
   @override
@@ -323,6 +414,7 @@ class Client extends _isc.ServerpodClientShared {
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
     'greeting': greeting,
+    'sync': sync,
   };
 
   @override

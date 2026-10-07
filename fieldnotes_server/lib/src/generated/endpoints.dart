@@ -10,6 +10,8 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:fieldnotes_server/src/generated/notes/note_change.dart'
+    as _icmwf49r;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as _iacs;
@@ -18,6 +20,7 @@ import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
 import '../auth/email_idp_endpoint.dart' as _iuc1hd5t;
 import '../auth/jwt_refresh_endpoint.dart' as _inwq3ztq;
 import '../greetings/greeting_endpoint.dart' as _il624ik7;
+import '../notes/sync_endpoint.dart' as _il6him71;
 
 class Endpoints extends _is.EndpointDispatch {
   @override
@@ -39,6 +42,12 @@ class Endpoints extends _is.EndpointDispatch {
         ..initialize(
           server,
           'greeting',
+          null,
+        ),
+      'sync': _il6him71.SyncEndpoint()
+        ..initialize(
+          server,
+          'sync',
           null,
         ),
     };
@@ -269,6 +278,148 @@ class Endpoints extends _is.EndpointDispatch {
                   (endpoints['greeting'] as _il624ik7.GreetingEndpoint).hello(
                     session,
                     params['name'],
+                  ),
+        ),
+      },
+    );
+    connectors['sync'] = _is.EndpointConnector(
+      name: 'sync',
+      endpoint: endpoints['sync']!,
+      methodConnectors: {
+        'pushNote': _is.MethodConnector(
+          name: 'pushNote',
+          params: {
+            'change': _is.ParameterDescription(
+              name: 'change',
+              type: _is.getType<_icmwf49r.NoteChange>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['sync'] as _il6him71.SyncEndpoint).pushNote(
+                session,
+                params['change'],
+              ),
+        ),
+        'pull': _is.MethodConnector(
+          name: 'pull',
+          params: {
+            'cursor': _is.ParameterDescription(
+              name: 'cursor',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'limit': _is.ParameterDescription(
+              name: 'limit',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['sync'] as _il6him71.SyncEndpoint).pull(
+                session,
+                params['cursor'],
+                limit: params['limit'],
+              ),
+        ),
+        'beginPhotoUpload': _is.MethodConnector(
+          name: 'beginPhotoUpload',
+          params: {
+            'photoId': _is.ParameterDescription(
+              name: 'photoId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'noteId': _is.ParameterDescription(
+              name: 'noteId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'mimeType': _is.ParameterDescription(
+              name: 'mimeType',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'byteSize': _is.ParameterDescription(
+              name: 'byteSize',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['sync'] as _il6him71.SyncEndpoint)
+                  .beginPhotoUpload(
+                    session,
+                    photoId: params['photoId'],
+                    noteId: params['noteId'],
+                    mimeType: params['mimeType'],
+                    byteSize: params['byteSize'],
+                  ),
+        ),
+        'completePhotoUpload': _is.MethodConnector(
+          name: 'completePhotoUpload',
+          params: {
+            'photoId': _is.ParameterDescription(
+              name: 'photoId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['sync'] as _il6him71.SyncEndpoint)
+                  .completePhotoUpload(
+                    session,
+                    params['photoId'],
+                  ),
+        ),
+        'deletePhoto': _is.MethodConnector(
+          name: 'deletePhoto',
+          params: {
+            'photoId': _is.ParameterDescription(
+              name: 'photoId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['sync'] as _il6him71.SyncEndpoint).deletePhoto(
+                    session,
+                    params['photoId'],
+                  ),
+        ),
+        'getPhotoData': _is.MethodConnector(
+          name: 'getPhotoData',
+          params: {
+            'photoId': _is.ParameterDescription(
+              name: 'photoId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['sync'] as _il6him71.SyncEndpoint).getPhotoData(
+                    session,
+                    params['photoId'],
                   ),
         ),
       },

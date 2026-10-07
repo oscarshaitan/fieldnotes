@@ -11,3 +11,10 @@ jwtRefresh:
   - refreshAccessToken:
 greeting:
   - hello:
+sync:
+  - pushNote:
+  - pull:
+  - beginPhotoUpload:
+  - completePhotoUpload:
+  - deletePhoto:
+  - getPhotoData:
