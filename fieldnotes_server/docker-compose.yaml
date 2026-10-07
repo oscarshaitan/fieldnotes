@@ -1,0 +1,30 @@
+services:
+  # Development services
+  postgres:
+    image: ghcr.io/serverpod/postgres:16
+    ports:
+      - "8090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: fieldnotes
+      POSTGRES_PASSWORD: "YTOp0gaPIh-5nB0D01K0x1urEKQlfPXL"
+    volumes:
+      - fieldnotes_data:/var/lib/postgresql/data
+
+
+  # Test services
+  postgres_test:
+    image: ghcr.io/serverpod/postgres:16
+    ports:
+      - "9090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: fieldnotes_test
+      POSTGRES_PASSWORD: "5mx6e6qatzBUNqGKhNLULxzYxYgJWpMx"
+    volumes:
+      - fieldnotes_test_data:/var/lib/postgresql/data
+
+
+volumes:
+  fieldnotes_data:
+  fieldnotes_test_data:
