@@ -47,4 +47,13 @@ If the user asks you to test the app:
 
 The app is launched from `fieldnotes_flutter/lib/driver.dart`, which starts the Flutter driver extension with text entry emulation turned off so the app stays usable by hand. To let the driver type, set `enableTextEntryEmulation: true` there and `hot_restart` the app.
 
-IMPORTANT: After building the first version of the app, update this AGENTS.md file with information about the app we're building. KEEP the info about the MCP server and the checklist. Remove this paragraph.
+## About this app
+
+FieldNotes is an offline-first notes app (text + photos) for mobile and web, built for the Serverpod hackathon. See `README.md` for the architecture.
+
+- **Server** (`fieldnotes_server/lib/src/notes/`): `Note`, `Photo`, `SyncCounter` tables; `SyncEndpoint` (`pushNote`, `pull`, photo upload/download); `merge.dart` three-way line merge. Every change gets a per-user increasing `seq` (pull cursor) under a row lock on `SyncCounter`.
+- **On-device DB**: `LocalNote`, `LocalPhoto`, `LocalSyncState` use `database: client` and live in SQLite on the client (web uses `web/db_worker.js` + `web/sqlite3.wasm`).
+- **Flutter** (`fieldnotes_flutter/lib/`): `data/local_db.dart` (DAO), `data/sync_engine.dart` (push → photo deletes → photo uploads → pull → photo downloads), `data/notes_repository.dart` (UI-facing `ChangeNotifier`), `ui/` (screens).
+- **Invariants to keep**: edits always go to the local DB first and are never blocked on the network; every push carries `baseRevision` + base text; conflicts are never resolved silently when both sides touched the same lines or when edit meets delete.
+- Merge and sync rules are covered by `fieldnotes_server/test/unit/merge_test.dart` and `test/integration/sync_endpoint_test.dart`; extend them when changing sync behaviour.
+- Use `~/tools/flutter` (Flutter 3.47.6) - Serverpod 4 needs Flutter >= 3.44.4.
