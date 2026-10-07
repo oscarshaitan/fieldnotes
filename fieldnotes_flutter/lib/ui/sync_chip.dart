@@ -50,7 +50,26 @@ class SyncChip extends StatelessWidget {
             avatar: Icon(icon, size: 18, color: color),
             label: Text(label),
             side: BorderSide(color: color.withValues(alpha: 0.4)),
-            onPressed: repository.syncNow,
+            onPressed: () {
+              repository.syncNow();
+              final error = repository.lastSyncError;
+              if (repository.status.value == SyncStatus.error &&
+                  error != null) {
+                showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Sync problem'),
+                    content: SelectableText(error),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
           ),
         );
       },

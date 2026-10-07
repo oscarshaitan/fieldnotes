@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:serverpod_auth_idp_flutter/serverpod_auth_idp_flutter.dart';
 
 import 'local_db.dart';
+import 'photo_uploader.dart';
 
 enum SyncStatus {
   /// Everything local has reached the server.
@@ -240,8 +241,14 @@ class SyncEngine {
       // Keep the photo, report it, and carry on with the rest of the sync so
       // one bad upload never blocks notes.
       try {
-        final ok = await FileUploader(description).uploadByteData(data);
-        if (!ok) throw StateError('the storage rejected the upload');
+        final result = await uploadWithDescription(
+          description,
+          Uint8List.sublistView(data),
+          photo.mimeType,
+        );
+        if (!result.ok) {
+          throw StateError('storage rejected the upload ($result)');
+        }
         await _client.sync.completePhotoUpload(photo.id);
         await _db.savePhoto(photo.copyWith(uploaded: true));
         onChanged();
