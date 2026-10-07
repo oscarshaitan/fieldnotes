@@ -68,6 +68,7 @@ class SyncEngine {
     }
     status.value = SyncStatus.syncing;
     try {
+      await _bindToAccount();
       await _pushNotes();
       await _pushPhotoDeletes();
       await _pushPhotoUploads();
@@ -85,6 +86,23 @@ class SyncEngine {
       lastError = e.toString();
       status.value = SyncStatus.offline;
     }
+    onChanged();
+  }
+
+  /// Local data and the pull cursor only make sense for one account on one
+  /// server. If a different account or server signs in, start from scratch
+  /// instead of mixing data (or skipping changes the new cursor never sees).
+  Future<void> _bindToAccount() async {
+    final user = _client.auth.authInfoListenable.value?.authUserId;
+    if (user == null) return;
+    final owner = '${_client.host}|$user';
+    final stored = await _db.owner();
+    if (stored == owner) return;
+    if (await _db.hasData()) {
+      debugPrint('Local data belongs to another account/server; resetting.');
+      await _db.wipe();
+    }
+    await _db.saveOwner(owner);
     onChanged();
   }
 

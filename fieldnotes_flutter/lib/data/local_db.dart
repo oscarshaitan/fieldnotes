@@ -107,6 +107,31 @@ class LocalDb {
     return row?.cursor ?? 0;
   }
 
+  Future<String?> owner() async {
+    final row = await LocalSyncState.db.findFirstRow(_session);
+    return row?.owner;
+  }
+
+  /// Whether anything (notes, photos, a cursor) is stored on this device.
+  Future<bool> hasData() async {
+    final row = await LocalSyncState.db.findFirstRow(_session);
+    if ((row?.cursor ?? 0) > 0) return true;
+    return await LocalNote.db.count(_session) > 0 ||
+        await LocalPhoto.db.count(_session) > 0;
+  }
+
+  Future<void> saveOwner(String owner) async {
+    final row = await LocalSyncState.db.findFirstRow(_session);
+    if (row == null) {
+      await LocalSyncState.db.insertRow(
+        _session,
+        LocalSyncState(cursor: 0, owner: owner),
+      );
+    } else {
+      await LocalSyncState.db.updateRow(_session, row.copyWith(owner: owner));
+    }
+  }
+
   Future<void> saveCursor(int cursor) async {
     final row = await LocalSyncState.db.findFirstRow(_session);
     if (row == null) {
