@@ -1,0 +1,5 @@
+class: NoteChangeResult
+fields:
+  status: NoteSyncStatus
+  ### The server's current version of the note (after the merge, if any).
+  note: Note

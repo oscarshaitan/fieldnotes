@@ -1,0 +1,20 @@
+### Metadata of a photo attached to a note. The bytes live in file storage.
+class: Photo
+table: photo
+fields:
+  id: UuidValue, defaultModel=random_v7
+  userId: UuidValue
+  noteId: UuidValue
+  mimeType: String
+  byteSize: int
+  storagePath: String
+  ### False until the client finished uploading and the server verified it.
+  uploaded: bool, default=false
+  deleted: bool, default=false
+  seq: int?
+  createdAt: DateTime
+indexes:
+  photo_user_seq_idx:
+    fields: userId, seq
+  photo_note_idx:
+    fields: noteId

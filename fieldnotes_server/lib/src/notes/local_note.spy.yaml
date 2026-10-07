@@ -1,0 +1,24 @@
+### A note in the on-device SQLite database.
+class: LocalNote
+table: local_note
+database: client
+fields:
+  id: UuidValue, defaultModel=random_v7
+  title: String, default=''
+  body: String, default=''
+  ### Last server revision this device knows about (0 = never synced).
+  revision: int, default=0
+  ### Server snapshot at `revision`; the common ancestor for merges.
+  baseTitle: String, default=''
+  baseBody: String, default=''
+  ### Local edits not yet accepted by the server.
+  dirty: bool, default=false
+  deleted: bool, default=false
+  ### Set when the server could not merge; remote* hold the server's version.
+  conflict: bool, default=false
+  remoteRevision: int?
+  remoteTitle: String?
+  remoteBody: String?
+  remoteDeleted: bool?
+  createdAt: DateTime
+  updatedAt: DateTime

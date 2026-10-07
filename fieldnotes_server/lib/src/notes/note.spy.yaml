@@ -1,0 +1,19 @@
+### A note as stored on the server. Also the DTO sent to clients.
+class: Note
+table: note
+fields:
+  id: UuidValue, defaultModel=random_v7
+  userId: UuidValue
+  title: String, default=''
+  body: String, default=''
+  ### Incremented on every accepted change. Clients send the revision they
+  ### based their edit on; a mismatch triggers a three-way merge.
+  revision: int, default=1
+  deleted: bool, default=false
+  ### Position in the user's change log, used as the pull cursor.
+  seq: int
+  createdAt: DateTime
+  updatedAt: DateTime
+indexes:
+  note_user_seq_idx:
+    fields: userId, seq

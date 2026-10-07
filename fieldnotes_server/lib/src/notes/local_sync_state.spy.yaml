@@ -1,0 +1,6 @@
+### Single-row table with the pull cursor.
+class: LocalSyncState
+table: local_sync_state
+database: client
+fields:
+  cursor: int, default=0

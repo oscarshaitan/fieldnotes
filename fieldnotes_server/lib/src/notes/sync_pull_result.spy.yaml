@@ -1,0 +1,6 @@
+class: SyncPullResult
+fields:
+  notes: List<Note>
+  photos: List<Photo>
+  cursor: int
+  hasMore: bool

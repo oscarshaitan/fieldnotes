@@ -1,0 +1,12 @@
+### An edit made on a device, together with the server snapshot it was based on.
+class: NoteChange
+fields:
+  noteId: UuidValue
+  ### Server revision the edit was based on. 0 for a note never synced.
+  baseRevision: int
+  baseTitle: String
+  baseBody: String
+  title: String
+  body: String
+  deleted: bool
+  createdAt: DateTime

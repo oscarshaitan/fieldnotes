@@ -16,16 +16,237 @@ import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
 import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
     as _iaic;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'package:serverpod_database/serverpod_database.dart' as _isd;
 import 'greetings/greeting.dart' as _izw8z7ou;
+import 'notes/local_note.dart' as _ikso7gqu;
+import 'notes/local_photo.dart' as _itwniwe0;
+import 'notes/local_sync_state.dart' as _in0ml025;
+import 'notes/note.dart' as _iylmodbg;
+import 'notes/note_change.dart' as _i61s5z42;
+import 'notes/note_change_result.dart' as _i8ubjst2;
+import 'notes/note_sync_status.dart' as _ib2x2ogd;
+import 'notes/photo.dart' as _irr91rn9;
+import 'notes/sync_pull_result.dart' as _i2fy8zhn;
 export 'greetings/greeting.dart';
+export 'notes/local_note.dart';
+export 'notes/local_photo.dart';
+export 'notes/local_sync_state.dart';
+export 'notes/note.dart';
+export 'notes/note_change.dart';
+export 'notes/note_change_result.dart';
+export 'notes/note_sync_status.dart';
+export 'notes/photo.dart';
+export 'notes/sync_pull_result.dart';
 export 'client.dart';
 
-class Protocol extends _isc.SerializationManager {
+class Protocol extends _isd.DatabaseSerializationManager {
   Protocol._();
 
   factory Protocol() => _instance;
 
   static final Protocol _instance = Protocol._().._registerHostProtocols();
+
+  static List<_isd.TableDefinition> get targetTableDefinitions => [
+    _isd.TableDefinition(
+      name: 'local_note',
+      dartName: 'LocalNote',
+      schema: 'public',
+      module: 'fieldnotes',
+      columns: [
+        _isd.ColumnDefinition(
+          name: 'id',
+          columnType: _isd.ColumnType.uuid,
+          isNullable: false,
+          dartType: 'UuidValue',
+          columnDefault: 'random_v7',
+        ),
+        _isd.ColumnDefinition(
+          name: 'title',
+          columnType: _isd.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+          columnDefault: '\'\'',
+        ),
+        _isd.ColumnDefinition(
+          name: 'body',
+          columnType: _isd.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+          columnDefault: '\'\'',
+        ),
+        _isd.ColumnDefinition(
+          name: 'revision',
+          columnType: _isd.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+          columnDefault: '0',
+        ),
+        _isd.ColumnDefinition(
+          name: 'baseTitle',
+          columnType: _isd.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+          columnDefault: '\'\'',
+        ),
+        _isd.ColumnDefinition(
+          name: 'baseBody',
+          columnType: _isd.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+          columnDefault: '\'\'',
+        ),
+        _isd.ColumnDefinition(
+          name: 'dirty',
+          columnType: _isd.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'false',
+        ),
+        _isd.ColumnDefinition(
+          name: 'deleted',
+          columnType: _isd.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'false',
+        ),
+        _isd.ColumnDefinition(
+          name: 'conflict',
+          columnType: _isd.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'false',
+        ),
+        _isd.ColumnDefinition(
+          name: 'remoteRevision',
+          columnType: _isd.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+        ),
+        _isd.ColumnDefinition(
+          name: 'remoteTitle',
+          columnType: _isd.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isd.ColumnDefinition(
+          name: 'remoteBody',
+          columnType: _isd.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isd.ColumnDefinition(
+          name: 'remoteDeleted',
+          columnType: _isd.ColumnType.boolean,
+          isNullable: true,
+          dartType: 'bool?',
+        ),
+        _isd.ColumnDefinition(
+          name: 'createdAt',
+          columnType: _isd.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+        _isd.ColumnDefinition(
+          name: 'updatedAt',
+          columnType: _isd.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [],
+      managed: true,
+    ),
+    _isd.TableDefinition(
+      name: 'local_photo',
+      dartName: 'LocalPhoto',
+      schema: 'public',
+      module: 'fieldnotes',
+      columns: [
+        _isd.ColumnDefinition(
+          name: 'id',
+          columnType: _isd.ColumnType.uuid,
+          isNullable: false,
+          dartType: 'UuidValue',
+          columnDefault: 'random_v7',
+        ),
+        _isd.ColumnDefinition(
+          name: 'noteId',
+          columnType: _isd.ColumnType.uuid,
+          isNullable: false,
+          dartType: 'UuidValue',
+        ),
+        _isd.ColumnDefinition(
+          name: 'mimeType',
+          columnType: _isd.ColumnType.text,
+          isNullable: false,
+          dartType: 'String',
+        ),
+        _isd.ColumnDefinition(
+          name: 'data',
+          columnType: _isd.ColumnType.bytea,
+          isNullable: true,
+          dartType: 'dart:typed_data:ByteData?',
+        ),
+        _isd.ColumnDefinition(
+          name: 'uploaded',
+          columnType: _isd.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'false',
+        ),
+        _isd.ColumnDefinition(
+          name: 'deleted',
+          columnType: _isd.ColumnType.boolean,
+          isNullable: false,
+          dartType: 'bool',
+          columnDefault: 'false',
+        ),
+        _isd.ColumnDefinition(
+          name: 'createdAt',
+          columnType: _isd.ColumnType.timestampWithoutTimeZone,
+          isNullable: false,
+          dartType: 'DateTime',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [],
+      managed: true,
+    ),
+    _isd.TableDefinition(
+      name: 'local_sync_state',
+      dartName: 'LocalSyncState',
+      schema: 'public',
+      module: 'fieldnotes',
+      columns: [
+        _isd.ColumnDefinition(
+          name: 'id',
+          columnType: _isd.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int?',
+          columnDefault: 'serial',
+        ),
+        _isd.ColumnDefinition(
+          name: 'cursor',
+          columnType: _isd.ColumnType.bigint,
+          isNullable: false,
+          dartType: 'int',
+          columnDefault: '0',
+        ),
+      ],
+      foreignKeys: [],
+      indexes: [],
+      managed: true,
+    ),
+    ..._iaic.Protocol() is _isd.DatabaseSerializationManager
+        ? (_iaic.Protocol() as _isd.DatabaseSerializationManager)
+              .getTargetTableDefinitions()
+        : [],
+    ..._iacc.Protocol() is _isd.DatabaseSerializationManager
+        ? (_iacc.Protocol() as _isd.DatabaseSerializationManager)
+              .getTargetTableDefinitions()
+        : [],
+  ];
 
   static String? getClassNameFromObjectJson(dynamic data) {
     if (data is! Map) return null;
@@ -57,8 +278,74 @@ class Protocol extends _isc.SerializationManager {
     if (t == _izw8z7ou.Greeting) {
       return _izw8z7ou.Greeting.fromJson(data) as T;
     }
+    if (t == _ikso7gqu.LocalNote) {
+      return _ikso7gqu.LocalNote.fromJson(data) as T;
+    }
+    if (t == _itwniwe0.LocalPhoto) {
+      return _itwniwe0.LocalPhoto.fromJson(data) as T;
+    }
+    if (t == _in0ml025.LocalSyncState) {
+      return _in0ml025.LocalSyncState.fromJson(data) as T;
+    }
+    if (t == _iylmodbg.Note) {
+      return _iylmodbg.Note.fromJson(data) as T;
+    }
+    if (t == _i61s5z42.NoteChange) {
+      return _i61s5z42.NoteChange.fromJson(data) as T;
+    }
+    if (t == _i8ubjst2.NoteChangeResult) {
+      return _i8ubjst2.NoteChangeResult.fromJson(data) as T;
+    }
+    if (t == _ib2x2ogd.NoteSyncStatus) {
+      return _ib2x2ogd.NoteSyncStatus.fromJson(data) as T;
+    }
+    if (t == _irr91rn9.Photo) {
+      return _irr91rn9.Photo.fromJson(data) as T;
+    }
+    if (t == _i2fy8zhn.SyncPullResult) {
+      return _i2fy8zhn.SyncPullResult.fromJson(data) as T;
+    }
     if (t == _isc.getType<_izw8z7ou.Greeting?>()) {
       return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_ikso7gqu.LocalNote?>()) {
+      return (data != null ? _ikso7gqu.LocalNote.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_itwniwe0.LocalPhoto?>()) {
+      return (data != null ? _itwniwe0.LocalPhoto.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_in0ml025.LocalSyncState?>()) {
+      return (data != null ? _in0ml025.LocalSyncState.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_iylmodbg.Note?>()) {
+      return (data != null ? _iylmodbg.Note.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i61s5z42.NoteChange?>()) {
+      return (data != null ? _i61s5z42.NoteChange.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i8ubjst2.NoteChangeResult?>()) {
+      return (data != null ? _i8ubjst2.NoteChangeResult.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_ib2x2ogd.NoteSyncStatus?>()) {
+      return (data != null ? _ib2x2ogd.NoteSyncStatus.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_irr91rn9.Photo?>()) {
+      return (data != null ? _irr91rn9.Photo.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i2fy8zhn.SyncPullResult?>()) {
+      return (data != null ? _i2fy8zhn.SyncPullResult.fromJson(data) : null)
+          as T;
+    }
+    if (t == List<_iylmodbg.Note>) {
+      return (data as List).map((e) => deserialize<_iylmodbg.Note>(e)).toList()
+          as T;
+    }
+    if (t == List<_irr91rn9.Photo>) {
+      return (data as List).map((e) => deserialize<_irr91rn9.Photo>(e)).toList()
+          as T;
     }
     try {
       return _iaic.Protocol().deserialize<T>(data, t);
@@ -72,6 +359,15 @@ class Protocol extends _isc.SerializationManager {
   static String? getClassNameForType(Type type) {
     return switch (type) {
       _izw8z7ou.Greeting => 'Greeting',
+      _ikso7gqu.LocalNote => 'LocalNote',
+      _itwniwe0.LocalPhoto => 'LocalPhoto',
+      _in0ml025.LocalSyncState => 'LocalSyncState',
+      _iylmodbg.Note => 'Note',
+      _i61s5z42.NoteChange => 'NoteChange',
+      _i8ubjst2.NoteChangeResult => 'NoteChangeResult',
+      _ib2x2ogd.NoteSyncStatus => 'NoteSyncStatus',
+      _irr91rn9.Photo => 'Photo',
+      _i2fy8zhn.SyncPullResult => 'SyncPullResult',
       _ => null,
     };
   }
@@ -88,6 +384,24 @@ class Protocol extends _isc.SerializationManager {
     switch (data) {
       case _izw8z7ou.Greeting():
         return 'Greeting';
+      case _ikso7gqu.LocalNote():
+        return 'LocalNote';
+      case _itwniwe0.LocalPhoto():
+        return 'LocalPhoto';
+      case _in0ml025.LocalSyncState():
+        return 'LocalSyncState';
+      case _iylmodbg.Note():
+        return 'Note';
+      case _i61s5z42.NoteChange():
+        return 'NoteChange';
+      case _i8ubjst2.NoteChangeResult():
+        return 'NoteChangeResult';
+      case _ib2x2ogd.NoteSyncStatus():
+        return 'NoteSyncStatus';
+      case _irr91rn9.Photo():
+        return 'Photo';
+      case _i2fy8zhn.SyncPullResult():
+        return 'SyncPullResult';
     }
     className = _iaic.Protocol().getClassNameForObject(data);
     if (className != null) {
@@ -113,6 +427,33 @@ class Protocol extends _isc.SerializationManager {
     if (dataClassName == 'Greeting') {
       return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
+    if (dataClassName == 'LocalNote') {
+      return deserialize<_ikso7gqu.LocalNote>(data['data']);
+    }
+    if (dataClassName == 'LocalPhoto') {
+      return deserialize<_itwniwe0.LocalPhoto>(data['data']);
+    }
+    if (dataClassName == 'LocalSyncState') {
+      return deserialize<_in0ml025.LocalSyncState>(data['data']);
+    }
+    if (dataClassName == 'Note') {
+      return deserialize<_iylmodbg.Note>(data['data']);
+    }
+    if (dataClassName == 'NoteChange') {
+      return deserialize<_i61s5z42.NoteChange>(data['data']);
+    }
+    if (dataClassName == 'NoteChangeResult') {
+      return deserialize<_i8ubjst2.NoteChangeResult>(data['data']);
+    }
+    if (dataClassName == 'NoteSyncStatus') {
+      return deserialize<_ib2x2ogd.NoteSyncStatus>(data['data']);
+    }
+    if (dataClassName == 'Photo') {
+      return deserialize<_irr91rn9.Photo>(data['data']);
+    }
+    if (dataClassName == 'SyncPullResult') {
+      return deserialize<_i2fy8zhn.SyncPullResult>(data['data']);
+    }
     if (dataClassName.startsWith('serverpod_auth_idp.')) {
       data['className'] = dataClassName.substring(19);
       return _iaic.Protocol().deserializeByClassName(data);
@@ -128,6 +469,41 @@ class Protocol extends _isc.SerializationManager {
     _iaic.Protocol().registerHostProtocol('fieldnotes', this);
     _iacc.Protocol().registerHostProtocol('fieldnotes', this);
   }
+
+  @override
+  _isd.Table? getTableForType(Type t) {
+    {
+      var protocol = _iaic.Protocol();
+      var table = protocol is _isd.DatabaseSerializationManager
+          ? (protocol as _isd.DatabaseSerializationManager).getTableForType(t)
+          : null;
+      if (table != null) {
+        return table;
+      }
+    }
+    {
+      var protocol = _iacc.Protocol();
+      var table = protocol is _isd.DatabaseSerializationManager
+          ? (protocol as _isd.DatabaseSerializationManager).getTableForType(t)
+          : null;
+      if (table != null) {
+        return table;
+      }
+    }
+    switch (t) {
+      case _ikso7gqu.LocalNote:
+        return _ikso7gqu.LocalNote.t;
+      case _itwniwe0.LocalPhoto:
+        return _itwniwe0.LocalPhoto.t;
+      case _in0ml025.LocalSyncState:
+        return _in0ml025.LocalSyncState.t;
+    }
+    return null;
+  }
+
+  @override
+  List<_isd.TableDefinition> getTargetTableDefinitions() =>
+      targetTableDefinitions;
 
   @override
   String getModuleName() => 'fieldnotes';

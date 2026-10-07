@@ -1,0 +1,97 @@
+/* AUTOMATICALLY GENERATED CODE DO NOT MODIFY */
+/*   To generate run: "serverpod generate"    */
+
+// ignore_for_file: implementation_imports
+// ignore_for_file: library_private_types_in_public_api
+// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: public_member_api_docs
+// ignore_for_file: type_literal_in_constant_pattern
+// ignore_for_file: use_super_parameters
+// ignore_for_file: invalid_use_of_internal_member
+
+// ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:serverpod/serverpod.dart' as _is;
+
+/// Single-row table with the pull cursor.
+abstract class LocalSyncState
+    implements _is.SerializableModel, _is.ProtocolSerialization {
+  LocalSyncState._({
+    this.id,
+    int? cursor,
+  }) : cursor = cursor ?? 0;
+
+  factory LocalSyncState({
+    int? id,
+    int? cursor,
+  }) = _LocalSyncStateImpl;
+
+  factory LocalSyncState.fromJson(Map<String, dynamic> jsonSerialization) {
+    return LocalSyncState(
+      id: jsonSerialization['id'] as int?,
+      cursor: jsonSerialization['cursor'] as int?,
+    );
+  }
+
+  /// The database id, set if the object has been inserted into the
+  /// database or if it has been fetched from the database. Otherwise,
+  /// the id will be null.
+  int? id;
+
+  int cursor;
+
+  /// Returns a shallow copy of this [LocalSyncState]
+  /// with some or all fields replaced by the given arguments.
+  @_is.useResult
+  LocalSyncState copyWith({
+    int? id,
+    int? cursor,
+  });
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      '__className__': 'LocalSyncState',
+      if (id != null) 'id': id,
+      'cursor': cursor,
+    };
+  }
+
+  @override
+  Map<String, dynamic> toJsonForProtocol() {
+    return {
+      '__className__': 'LocalSyncState',
+      if (id != null) 'id': id,
+      'cursor': cursor,
+    };
+  }
+
+  @override
+  String toString() {
+    return _is.SerializationManager.encode(this);
+  }
+}
+
+class _Undefined {}
+
+class _LocalSyncStateImpl extends LocalSyncState {
+  _LocalSyncStateImpl({
+    int? id,
+    int? cursor,
+  }) : super._(
+         id: id,
+         cursor: cursor,
+       );
+
+  /// Returns a shallow copy of this [LocalSyncState]
+  /// with some or all fields replaced by the given arguments.
+  @_is.useResult
+  @override
+  LocalSyncState copyWith({
+    Object? id = _Undefined,
+    int? cursor,
+  }) {
+    return LocalSyncState(
+      id: id is int? ? id : this.id,
+      cursor: cursor ?? this.cursor,
+    );
+  }
+}

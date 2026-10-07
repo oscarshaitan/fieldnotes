@@ -1,0 +1,15 @@
+### A photo in the on-device SQLite database.
+class: LocalPhoto
+table: local_photo
+database: client
+fields:
+  id: UuidValue, defaultModel=random_v7
+  noteId: UuidValue
+  mimeType: String
+  ### Null until downloaded (photos taken on another device).
+  data: ByteData?
+  ### True once the bytes are safely on the server.
+  uploaded: bool, default=false
+  ### Removed locally, waiting for the deletion to reach the server.
+  deleted: bool, default=false
+  createdAt: DateTime

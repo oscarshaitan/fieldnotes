@@ -1,0 +1,8 @@
+enum: NoteSyncStatus
+values:
+  ### Accepted as is.
+  - applied
+  ### Concurrent edits were merged automatically.
+  - merged
+  ### Concurrent edits could not be merged; the user must decide.
+  - conflict

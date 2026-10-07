@@ -1,0 +1,11 @@
+### Per-user monotonically increasing counter that orders all changes.
+class: SyncCounter
+table: sync_counter
+serverOnly: true
+fields:
+  userId: UuidValue
+  value: int, default=0
+indexes:
+  sync_counter_user_idx:
+    fields: userId
+    unique: true
