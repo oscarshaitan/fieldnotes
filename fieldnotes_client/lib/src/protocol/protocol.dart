@@ -17,7 +17,6 @@ import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
     as _iaic;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:serverpod_database/serverpod_database.dart' as _isd;
-import 'greetings/greeting.dart' as _izw8z7ou;
 import 'notes/local_note.dart' as _ikso7gqu;
 import 'notes/local_photo.dart' as _itwniwe0;
 import 'notes/local_sync_state.dart' as _in0ml025;
@@ -27,7 +26,6 @@ import 'notes/note_change_result.dart' as _i8ubjst2;
 import 'notes/note_sync_status.dart' as _ib2x2ogd;
 import 'notes/photo.dart' as _irr91rn9;
 import 'notes/sync_pull_result.dart' as _i2fy8zhn;
-export 'greetings/greeting.dart';
 export 'notes/local_note.dart';
 export 'notes/local_photo.dart';
 export 'notes/local_sync_state.dart';
@@ -275,9 +273,6 @@ class Protocol extends _isd.DatabaseSerializationManager {
       }
     }
 
-    if (t == _izw8z7ou.Greeting) {
-      return _izw8z7ou.Greeting.fromJson(data) as T;
-    }
     if (t == _ikso7gqu.LocalNote) {
       return _ikso7gqu.LocalNote.fromJson(data) as T;
     }
@@ -304,9 +299,6 @@ class Protocol extends _isd.DatabaseSerializationManager {
     }
     if (t == _i2fy8zhn.SyncPullResult) {
       return _i2fy8zhn.SyncPullResult.fromJson(data) as T;
-    }
-    if (t == _isc.getType<_izw8z7ou.Greeting?>()) {
-      return (data != null ? _izw8z7ou.Greeting.fromJson(data) : null) as T;
     }
     if (t == _isc.getType<_ikso7gqu.LocalNote?>()) {
       return (data != null ? _ikso7gqu.LocalNote.fromJson(data) : null) as T;
@@ -358,7 +350,6 @@ class Protocol extends _isd.DatabaseSerializationManager {
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
-      _izw8z7ou.Greeting => 'Greeting',
       _ikso7gqu.LocalNote => 'LocalNote',
       _itwniwe0.LocalPhoto => 'LocalPhoto',
       _in0ml025.LocalSyncState => 'LocalSyncState',
@@ -382,8 +373,6 @@ class Protocol extends _isd.DatabaseSerializationManager {
     }
 
     switch (data) {
-      case _izw8z7ou.Greeting():
-        return 'Greeting';
       case _ikso7gqu.LocalNote():
         return 'LocalNote';
       case _itwniwe0.LocalPhoto():
@@ -423,9 +412,6 @@ class Protocol extends _isd.DatabaseSerializationManager {
     var dataClassName = data['className'];
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
-    }
-    if (dataClassName == 'Greeting') {
-      return deserialize<_izw8z7ou.Greeting>(data['data']);
     }
     if (dataClassName == 'LocalNote') {
       return deserialize<_ikso7gqu.LocalNote>(data['data']);

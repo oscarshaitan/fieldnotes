@@ -12,8 +12,6 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
 import 'dart:typed_data' as _idt;
-import 'package:fieldnotes_client/src/protocol/greetings/greeting.dart'
-    as _ip7pdgaq;
 import 'package:fieldnotes_client/src/protocol/notes/note_change.dart'
     as _ipbq5bis;
 import 'package:fieldnotes_client/src/protocol/notes/note_change_result.dart'
@@ -256,24 +254,6 @@ class EndpointJwtRefresh extends _iacc.EndpointRefreshJwtTokens {
       );
 }
 
-/// This is an example endpoint that returns a greeting message through
-/// its [hello] method.
-/// {@category Endpoint}
-class EndpointGreeting extends _isc.EndpointRef {
-  EndpointGreeting(_isc.EndpointCaller caller) : super(caller);
-
-  @override
-  String get name => 'greeting';
-
-  /// Returns a personalized greeting message: "Hello {name}".
-  _ida.Future<_ip7pdgaq.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_ip7pdgaq.Greeting>(
-        'greeting',
-        'hello',
-        {'name': name},
-      );
-}
-
 /// Offline-first sync API: devices push their local edits, and pull everything
 /// that changed since their cursor.
 ///
@@ -394,7 +374,6 @@ class Client extends _isc.ServerpodClientShared {
        ) {
     emailIdp = EndpointEmailIdp(this);
     jwtRefresh = EndpointJwtRefresh(this);
-    greeting = EndpointGreeting(this);
     sync = EndpointSync(this);
     modules = Modules(this);
   }
@@ -402,8 +381,6 @@ class Client extends _isc.ServerpodClientShared {
   late final EndpointEmailIdp emailIdp;
 
   late final EndpointJwtRefresh jwtRefresh;
-
-  late final EndpointGreeting greeting;
 
   late final EndpointSync sync;
 
@@ -413,7 +390,6 @@ class Client extends _isc.ServerpodClientShared {
   Map<String, _isc.EndpointRef> get endpointRefLookup => {
     'emailIdp': emailIdp,
     'jwtRefresh': jwtRefresh,
-    'greeting': greeting,
     'sync': sync,
   };
 

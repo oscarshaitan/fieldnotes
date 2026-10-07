@@ -325,7 +325,7 @@ void main() {
         var hasMore = true;
         while (hasMore) {
           final page = await endpoints.sync.pull(alice, cursor, 2);
-          seen.addAll(page.notes.map((n) => n.id!));
+          seen.addAll(page.notes.map((n) => n.id));
           cursor = page.cursor;
           hasMore = page.hasMore;
         }
