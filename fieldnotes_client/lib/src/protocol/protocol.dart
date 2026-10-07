@@ -231,6 +231,12 @@ class Protocol extends _isd.DatabaseSerializationManager {
           dartType: 'int',
           columnDefault: '0',
         ),
+        _isd.ColumnDefinition(
+          name: 'owner',
+          columnType: _isd.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
       ],
       foreignKeys: [],
       indexes: [],

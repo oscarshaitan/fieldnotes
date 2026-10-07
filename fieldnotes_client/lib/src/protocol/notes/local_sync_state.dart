@@ -13,23 +13,26 @@
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
 import 'package:serverpod_database/serverpod_database.dart' as _isd;
 
-/// Single-row table with the pull cursor.
+/// Single-row table with the pull cursor and whose data this device holds.
 abstract class LocalSyncState
     implements _isd.TableRow<int?>, _isc.ProtocolSerialization {
   LocalSyncState._({
     this.id,
     int? cursor,
+    this.owner,
   }) : cursor = cursor ?? 0;
 
   factory LocalSyncState({
     int? id,
     int? cursor,
+    String? owner,
   }) = _LocalSyncStateImpl;
 
   factory LocalSyncState.fromJson(Map<String, dynamic> jsonSerialization) {
     return LocalSyncState(
       id: jsonSerialization['id'] as int?,
       cursor: jsonSerialization['cursor'] as int?,
+      owner: jsonSerialization['owner'] as String?,
     );
   }
 
@@ -42,6 +45,10 @@ abstract class LocalSyncState
 
   int cursor;
 
+  /// "<server url>|<user id>" the local data belongs to. Data is discarded when
+  /// another account or server signs in, since cursors are per user and server.
+  String? owner;
+
   @override
   _isd.Table<int?> get table => t;
 
@@ -51,6 +58,7 @@ abstract class LocalSyncState
   LocalSyncState copyWith({
     int? id,
     int? cursor,
+    String? owner,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -58,6 +66,7 @@ abstract class LocalSyncState
       '__className__': 'LocalSyncState',
       if (id != null) 'id': id,
       'cursor': cursor,
+      if (owner != null) 'owner': owner,
     };
   }
 
@@ -67,6 +76,7 @@ abstract class LocalSyncState
       '__className__': 'LocalSyncState',
       if (id != null) 'id': id,
       'cursor': cursor,
+      if (owner != null) 'owner': owner,
     };
   }
 
@@ -104,9 +114,11 @@ class _LocalSyncStateImpl extends LocalSyncState {
   _LocalSyncStateImpl({
     int? id,
     int? cursor,
+    String? owner,
   }) : super._(
          id: id,
          cursor: cursor,
+         owner: owner,
        );
 
   /// Returns a shallow copy of this [LocalSyncState]
@@ -116,10 +128,12 @@ class _LocalSyncStateImpl extends LocalSyncState {
   LocalSyncState copyWith({
     Object? id = _Undefined,
     int? cursor,
+    Object? owner = _Undefined,
   }) {
     return LocalSyncState(
       id: id is int? ? id : this.id,
       cursor: cursor ?? this.cursor,
+      owner: owner is String? ? owner : this.owner,
     );
   }
 }
@@ -129,6 +143,11 @@ class LocalSyncStateUpdateTable extends _isd.UpdateTable<LocalSyncStateTable> {
 
   _isd.ColumnValue<int, int> cursor(int value) => _isd.ColumnValue(
     table.cursor,
+    value,
+  );
+
+  _isd.ColumnValue<String, String> owner(String? value) => _isd.ColumnValue(
+    table.owner,
     value,
   );
 }
@@ -142,16 +161,25 @@ class LocalSyncStateTable extends _isd.Table<int?> {
       this,
       hasDefault: true,
     );
+    owner = _isd.ColumnString(
+      'owner',
+      this,
+    );
   }
 
   late final LocalSyncStateUpdateTable updateTable;
 
   late final _isd.ColumnInt cursor;
 
+  /// "<server url>|<user id>" the local data belongs to. Data is discarded when
+  /// another account or server signs in, since cursors are per user and server.
+  late final _isd.ColumnString owner;
+
   @override
   List<_isd.Column> get columns => [
     id,
     cursor,
+    owner,
   ];
 }
 

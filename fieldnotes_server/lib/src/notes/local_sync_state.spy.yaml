@@ -1,6 +1,9 @@
-### Single-row table with the pull cursor.
+### Single-row table with the pull cursor and whose data this device holds.
 class: LocalSyncState
 table: local_sync_state
 database: client
 fields:
   cursor: int, default=0
+  ### "<server url>|<user id>" the local data belongs to. Data is discarded when
+  ### another account or server signs in, since cursors are per user and server.
+  owner: String?
