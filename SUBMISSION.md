@@ -1,5 +1,10 @@
 # Hackathon submission material
 
+## Links
+
+- Repo: https://github.com/oscarshaitan/fieldnotes
+- Live web app: https://sync-draft.serverpod.space
+
 ## Project description (paste into BuilderBase)
 
 **FieldNotes** is an offline-first notes app with photos for mobile and web, built with Flutter and Serverpod 4.
