@@ -40,6 +40,10 @@ class SyncEngine {
   final status = ValueNotifier<SyncStatus>(SyncStatus.synced);
   String? lastError;
 
+  /// Photos that could not be uploaded in the last round. They are retried,
+  /// but never block syncing of notes.
+  int photoFailures = 0;
+
   bool _running = false;
   bool _again = false;
 
@@ -67,6 +71,7 @@ class SyncEngine {
       return;
     }
     status.value = SyncStatus.syncing;
+    photoFailures = 0;
     try {
       await _bindToAccount();
       await _pushNotes();
@@ -74,8 +79,8 @@ class SyncEngine {
       await _pushPhotoUploads();
       await _pull();
       await _downloadPhotos();
-      lastError = null;
-      status.value = SyncStatus.synced;
+      if (photoFailures == 0) lastError = null;
+      status.value = photoFailures == 0 ? SyncStatus.synced : SyncStatus.error;
     } on ServerpodClientUnauthorized {
       status.value = SyncStatus.signedOut;
     } on ServerpodClientHttpException catch (e) {
@@ -208,24 +213,44 @@ class SyncEngine {
       final note = await _db.note(photo.noteId);
       // The note must exist on the server first; it will after the next round.
       if (data == null || note == null || note.revision == 0) continue;
+
+      final String description;
       try {
-        final description = await _client.sync.beginPhotoUpload(
+        description = await _client.sync.beginPhotoUpload(
           photoId: photo.id,
           noteId: photo.noteId,
           mimeType: photo.mimeType,
           byteSize: data.lengthInBytes,
         );
+      } on ServerpodClientUnauthorized {
+        rethrow;
+      } on ServerpodClientNetworkException {
+        rethrow; // offline: stop the round
+      } on ServerpodClientHttpException catch (e) {
+        // The server refused this photo (unsupported type, too large...).
+        // Drop it instead of retrying forever.
+        debugPrint('Dropping photo ${photo.id}: $e');
+        lastError = 'Photo rejected by the server: ${e.message}';
+        photoFailures++;
+        await _db.removePhoto(photo.id);
+        continue;
+      }
+
+      // From here on a failure is about moving the bytes or verifying them.
+      // Keep the photo, report it, and carry on with the rest of the sync so
+      // one bad upload never blocks notes.
+      try {
         final ok = await FileUploader(description).uploadByteData(data);
-        if (!ok) throw StateError('Photo upload failed.');
+        if (!ok) throw StateError('the storage rejected the upload');
         await _client.sync.completePhotoUpload(photo.id);
         await _db.savePhoto(photo.copyWith(uploaded: true));
         onChanged();
-      } on ServerpodClientHttpException catch (e) {
-        // Rejected (e.g. unsupported or oversized): drop it instead of
-        // blocking every later sync.
-        if (e is ServerpodClientUnauthorized) rethrow;
-        debugPrint('Dropping photo ${photo.id}: $e');
-        await _db.removePhoto(photo.id);
+      } on ServerpodClientUnauthorized {
+        rethrow;
+      } catch (e) {
+        debugPrint('Photo upload failed for ${photo.id}: $e');
+        lastError = 'Photo upload failed: $e';
+        photoFailures++;
       }
     }
   }

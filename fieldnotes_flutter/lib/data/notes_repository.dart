@@ -47,6 +47,7 @@ class NotesRepository extends ChangeNotifier {
 
   ValueListenable<SyncStatus> get status => _engine.status;
   String? get lastSyncError => _engine.lastError;
+  int get photoFailures => _engine.photoFailures;
 
   Timer? _debounce;
   Timer? _poll;

@@ -30,7 +30,9 @@ class SyncChip extends StatelessWidget {
           ),
           SyncStatus.error => (
             Icons.error_outline,
-            'Sync problem',
+            repository.photoFailures > 0
+                ? 'Photo upload failed'
+                : 'Sync problem',
             scheme.error,
           ),
           SyncStatus.synced =>
