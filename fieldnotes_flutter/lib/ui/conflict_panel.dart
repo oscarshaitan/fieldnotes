@@ -30,9 +30,9 @@ class ConflictBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 (note.remoteDeleted ?? false)
-                    ? 'This note was deleted on another device, but you edited it.'
-                    : 'This note was changed on another device while you were '
-                          'editing it. Both versions touch the same lines.',
+                    ? 'This note was deleted remotely, but you edited it locally.'
+                    : 'This note was changed remotely while you edited it locally. '
+                          'Both versions touch the same lines.',
                 style: TextStyle(color: scheme.onErrorContainer),
               ),
             ),
@@ -116,14 +116,14 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                   const SizedBox(height: 4),
                   Text(
                     remoteDeleted
-                        ? 'You edited this note, but it was deleted on another device.'
+                        ? 'You edited this note, but it was deleted remotely.'
                         : note.deleted
-                        ? 'You deleted this note, but it was edited on another device.'
+                        ? 'You deleted this note, but it was edited remotely.'
                         : 'Both devices changed the ${titleChanged && bodyChanged
                               ? 'title and the text'
                               : titleChanged
                               ? 'title'
-                              : 'text'} of this note differently. Compare them below.',
+                              : 'text'} of this note differently. Compare local and remote below.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -141,11 +141,11 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                   children: [
                     _Legend(
                       color: const Color(0xFFF85149),
-                      label: 'Only on the other device',
+                      label: 'Remote',
                     ),
                     _Legend(
                       color: const Color(0xFF2EA043),
-                      label: 'Only in your version',
+                      label: 'Local',
                     ),
                     Text(
                       '+$added  −$removed lines',
@@ -181,8 +181,8 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                         DiffView(
                           oldText: remoteTitle,
                           newText: note.title,
-                          oldLabel: 'Other device',
-                          newLabel: 'Your version',
+                          oldLabel: 'Remote',
+                          newLabel: 'Local',
                           split: split,
                         ),
                         const SizedBox(height: 16),
@@ -193,8 +193,8 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                         DiffView(
                           oldText: remoteBody,
                           newText: note.body,
-                          oldLabel: 'Other device',
-                          newLabel: 'Your version',
+                          oldLabel: 'Remote',
+                          newLabel: 'Local',
                           split: split,
                         ),
                       ],
@@ -218,8 +218,8 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                     child: const Text('Decide later'),
                   ),
                   OutlinedButton(
-                    onPressed: () => _choose(ConflictChoice.theirs),
-                    child: const Text('Keep other device'),
+                    onPressed: () => _choose(ConflictChoice.remote),
+                    child: const Text('Keep remote'),
                   ),
                   if (bothEdited)
                     OutlinedButton(
@@ -227,8 +227,8 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                       child: const Text('Keep both'),
                     ),
                   FilledButton(
-                    onPressed: () => _choose(ConflictChoice.mine),
-                    child: Text(note.deleted ? 'Delete anyway' : 'Keep mine'),
+                    onPressed: () => _choose(ConflictChoice.local),
+                    child: Text(note.deleted ? 'Delete anyway' : 'Keep local'),
                   ),
                 ],
               ),
@@ -290,8 +290,8 @@ class _DeletionSummary extends StatelessWidget {
           children: [
             Text(
               remoteDeleted
-                  ? 'Your version (deleted on the other device)'
-                  : 'Other device version (you deleted this note)',
+                  ? 'Local version (deleted on the remote device)'
+                  : 'Remote version (you deleted this note locally)',
               style: theme.textTheme.labelLarge,
             ),
             const SizedBox(height: 8),

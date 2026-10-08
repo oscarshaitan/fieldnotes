@@ -9,13 +9,13 @@ import 'local_db.dart';
 import 'sync_engine.dart';
 
 enum ConflictChoice {
-  /// Keep this device's version and overwrite the server's.
-  mine,
+  /// Keep the local version and overwrite the remote one.
+  local,
 
-  /// Discard this device's edits and take the server's version.
-  theirs,
+  /// Discard the local edits and take the remote version.
+  remote,
 
-  /// Take the server's version and keep this device's as a separate note.
+  /// Take the remote version and keep the local one as a separate note.
   both,
 }
 
@@ -216,7 +216,7 @@ class NotesRepository extends ChangeNotifier {
     final remoteDeleted = note.remoteDeleted ?? false;
     final now = DateTime.now().toUtc();
 
-    if (choice == ConflictChoice.mine) {
+    if (choice == ConflictChoice.local) {
       // Rebase onto the server version; the next push is then a plain
       // fast-forward that overwrites it with ours.
       await _db.saveNote(
@@ -238,7 +238,9 @@ class NotesRepository extends ChangeNotifier {
         await _db.saveNote(
           LocalNote(
             id: const Uuid().v7obj(),
-            title: note.title.isEmpty ? 'My version' : '${note.title} (mine)',
+            title: note.title.isEmpty
+                ? 'Local version'
+                : '${note.title} (local)',
             body: note.body,
             dirty: true,
             createdAt: now,
