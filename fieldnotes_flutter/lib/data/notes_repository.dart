@@ -42,12 +42,15 @@ class NotesRepository extends ChangeNotifier {
   /// Local changes not yet on the server.
   int pending = 0;
 
-  /// Bumped on every change so photo widgets know to reload.
-  int version = 0;
+  /// Bumped only when photos change, so photo widgets reload only then.
+  int photosVersion = 0;
 
   ValueListenable<SyncStatus> get status => _engine.status;
   String? get lastSyncError => _engine.lastError;
   int get photoFailures => _engine.photoFailures;
+
+  Object? _signature;
+  bool _localPhotosChanged = false;
 
   Timer? _debounce;
   Timer? _poll;
@@ -72,11 +75,35 @@ class NotesRepository extends ChangeNotifier {
     _debounce = Timer(const Duration(milliseconds: 800), syncNow);
   }
 
+  /// Reloads the lists from the local database. Listeners are only notified
+  /// when something visible changed, so the periodic background sync does not
+  /// make the UI flicker.
   Future<void> _refresh() async {
     if (_disposed) return;
-    notes = await _db.visibleNotes();
-    pending = await _db.pendingCount();
-    version++;
+    final latest = await _db.visibleNotes();
+    final latestPending = await _db.pendingCount();
+    final photosChanged = _engine.takePhotosChanged() || _localPhotosChanged;
+    _localPhotosChanged = false;
+
+    final signature = Object.hashAll([
+      for (final n in latest)
+        Object.hash(
+          n.id,
+          n.revision,
+          n.dirty,
+          n.conflict,
+          n.title,
+          n.body,
+          n.updatedAt,
+        ),
+      latestPending,
+    ]);
+    if (signature == _signature && !photosChanged) return;
+
+    _signature = signature;
+    notes = latest;
+    pending = latestPending;
+    if (photosChanged) photosVersion++;
     if (!_disposed) notifyListeners();
   }
 
@@ -117,6 +144,7 @@ class NotesRepository extends ChangeNotifier {
     if (note == null) return;
     if (note.revision == 0) {
       await _db.removeNote(id); // never reached the server
+      _localPhotosChanged = true;
     } else {
       await _db.saveNote(
         note.copyWith(
@@ -160,6 +188,7 @@ class NotesRepository extends ChangeNotifier {
         createdAt: DateTime.now().toUtc(),
       ),
     );
+    _localPhotosChanged = true;
     await _refresh();
     _scheduleSync();
   }
@@ -170,6 +199,7 @@ class NotesRepository extends ChangeNotifier {
     } else {
       await _db.removePhoto(photo.id);
     }
+    _localPhotosChanged = true;
     await _refresh();
     _scheduleSync();
   }

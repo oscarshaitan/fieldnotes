@@ -5,8 +5,68 @@ import 'package:image_picker/image_picker.dart';
 
 import '../data/notes_repository.dart';
 
-Uint8List _bytesOf(ByteData data) =>
-    data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+/// Photo bytes as a [Uint8List]. The same list is reused for the same photo so
+/// Flutter's image cache recognises it and does not decode (and flash) again.
+final _bytesCache = <String, Uint8List>{};
+
+Uint8List _bytesOf(LocalPhoto photo) {
+  final cached = _bytesCache[photo.id.toString()];
+  if (cached != null) return cached;
+  final data = photo.data!;
+  final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+  if (_bytesCache.length > 60) _bytesCache.remove(_bytesCache.keys.first);
+  return _bytesCache[photo.id.toString()] = bytes;
+}
+
+/// Loads a note's photos and reloads only when photos actually changed. The
+/// previous photos stay on screen while reloading, so nothing blinks.
+class _NotePhotos extends StatefulWidget {
+  const _NotePhotos({
+    required this.repository,
+    required this.noteId,
+    required this.builder,
+  });
+
+  final NotesRepository repository;
+  final UuidValue noteId;
+  final Widget Function(BuildContext context, List<LocalPhoto> photos) builder;
+
+  @override
+  State<_NotePhotos> createState() => _NotePhotosState();
+}
+
+class _NotePhotosState extends State<_NotePhotos> {
+  List<LocalPhoto> _photos = const [];
+  int _loadedVersion = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.repository.addListener(_maybeReload);
+    _reload();
+  }
+
+  @override
+  void dispose() {
+    widget.repository.removeListener(_maybeReload);
+    super.dispose();
+  }
+
+  void _maybeReload() {
+    if (widget.repository.photosVersion != _loadedVersion) _reload();
+  }
+
+  Future<void> _reload() async {
+    final version = widget.repository.photosVersion;
+    _loadedVersion = version;
+    final photos = await widget.repository.photosFor(widget.noteId);
+    if (!mounted) return;
+    setState(() => _photos = photos);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _photos);
+}
 
 /// Small preview of a note's first photo, or a note icon when it has none.
 class PhotoThumb extends StatelessWidget {
@@ -20,16 +80,14 @@ class PhotoThumb extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return SizedBox.square(
       dimension: 52,
-      child: FutureBuilder<List<LocalPhoto>>(
-        // `version` changes whenever photos may have changed.
-        key: ValueKey((noteId, repository.version)),
-        future: repository.photosFor(noteId),
-        builder: (context, snapshot) {
-          final photos = snapshot.data ?? const <LocalPhoto>[];
-          final data = photos.map((p) => p.data).whereType<ByteData>();
+      child: _NotePhotos(
+        repository: repository,
+        noteId: noteId,
+        builder: (context, photos) {
+          final withData = photos.where((p) => p.data != null);
           return ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: data.isEmpty
+            child: withData.isEmpty
                 ? ColoredBox(
                     color: scheme.surfaceContainerHighest,
                     child: Icon(
@@ -38,7 +96,7 @@ class PhotoThumb extends StatelessWidget {
                     ),
                   )
                 : Image.memory(
-                    _bytesOf(data.first),
+                    _bytesOf(withData.first),
                     fit: BoxFit.cover,
                     cacheWidth: 160,
                     gaplessPlayback: true,
@@ -103,45 +161,40 @@ class PhotoStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: repository,
-      builder: (context, _) {
-        return FutureBuilder<List<LocalPhoto>>(
-          key: ValueKey((noteId, repository.version)),
-          future: repository.photosFor(noteId),
-          builder: (context, snapshot) {
-            final photos = snapshot.data ?? const <LocalPhoto>[];
-            return SizedBox(
-              height: 104,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  if (_canUseCamera)
-                    _AddTile(
-                      icon: Icons.photo_camera_outlined,
-                      label: 'Camera',
-                      onTap: enabled
-                          ? () => _pick(context, ImageSource.camera)
-                          : null,
-                    ),
-                  _AddTile(
-                    icon: Icons.add_photo_alternate_outlined,
-                    label: _canUseCamera ? 'Gallery' : 'Add photo',
-                    onTap: enabled
-                        ? () => _pick(context, ImageSource.gallery)
-                        : null,
-                  ),
-                  for (final photo in photos)
-                    _PhotoTile(
-                      repository: repository,
-                      photo: photo,
-                      enabled: enabled,
-                    ),
-                ],
+    return _NotePhotos(
+      repository: repository,
+      noteId: noteId,
+      builder: (context, photos) {
+        return SizedBox(
+          height: 104,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              if (_canUseCamera)
+                _AddTile(
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Camera',
+                  onTap: enabled
+                      ? () => _pick(context, ImageSource.camera)
+                      : null,
+                ),
+              _AddTile(
+                icon: Icons.add_photo_alternate_outlined,
+                label: _canUseCamera ? 'Gallery' : 'Add photo',
+                onTap: enabled
+                    ? () => _pick(context, ImageSource.gallery)
+                    : null,
               ),
-            );
-          },
+              for (final photo in photos)
+                _PhotoTile(
+                  key: ValueKey(photo.id),
+                  repository: repository,
+                  photo: photo,
+                  enabled: enabled,
+                ),
+            ],
+          ),
         );
       },
     );
@@ -185,6 +238,7 @@ class _AddTile extends StatelessWidget {
 
 class _PhotoTile extends StatelessWidget {
   const _PhotoTile({
+    super.key,
     required this.repository,
     required this.photo,
     required this.enabled,
@@ -221,10 +275,10 @@ class _PhotoTile extends StatelessWidget {
                   : InkWell(
                       onTap: () => showDialog<void>(
                         context: context,
-                        builder: (_) => _PhotoViewer(bytes: _bytesOf(data)),
+                        builder: (_) => _PhotoViewer(bytes: _bytesOf(photo)),
                       ),
                       child: Image.memory(
-                        _bytesOf(data),
+                        _bytesOf(photo),
                         fit: BoxFit.cover,
                         cacheWidth: 300,
                         gaplessPlayback: true,
