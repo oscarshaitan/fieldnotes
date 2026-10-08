@@ -90,7 +90,11 @@ class _ConflictDialogState extends State<_ConflictDialog> {
     final remoteTitle = note.remoteTitle ?? '';
     final remoteBody = note.remoteBody ?? '';
     final bodyDiff = diffText(remoteBody, note.body);
+    final titleDiff = diffText(remoteTitle, note.title);
     final titleChanged = remoteTitle != note.title;
+    final bodyChanged = remoteBody != note.body;
+    final added = titleDiff.added + bodyDiff.added;
+    final removed = titleDiff.removed + bodyDiff.removed;
 
     return Dialog(
       insetPadding: const EdgeInsets.all(16),
@@ -115,7 +119,11 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                         ? 'You edited this note, but it was deleted on another device.'
                         : note.deleted
                         ? 'You deleted this note, but it was edited on another device.'
-                        : 'Both devices changed the same lines. Compare them below.',
+                        : 'Both devices changed the ${titleChanged && bodyChanged
+                              ? 'title and the text'
+                              : titleChanged
+                              ? 'title'
+                              : 'text'} of this note differently. Compare them below.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -140,7 +148,7 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                       label: 'Only in your version',
                     ),
                     Text(
-                      '+${bodyDiff.added}  −${bodyDiff.removed} lines',
+                      '+$added  −$removed lines',
                       style: theme.textTheme.labelMedium,
                     ),
                     SegmentedButton<bool>(
@@ -181,13 +189,21 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                       ],
                       Text('Note text', style: theme.textTheme.titleSmall),
                       const SizedBox(height: 6),
-                      DiffView(
-                        oldText: remoteBody,
-                        newText: note.body,
-                        oldLabel: 'Other device',
-                        newLabel: 'Your version',
-                        split: split,
-                      ),
+                      if (bodyChanged)
+                        DiffView(
+                          oldText: remoteBody,
+                          newText: note.body,
+                          oldLabel: 'Other device',
+                          newLabel: 'Your version',
+                          split: split,
+                        )
+                      else
+                        Text(
+                          'No differences - the text is the same on both devices.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                     ] else
                       _DeletionSummary(note: note),
                     const SizedBox(height: 16),
