@@ -33,7 +33,7 @@ Suggested video (about 100 s, two iPhone simulators side by side, same account):
 5. **1:05** - Offline again: edit the **same line** on both, reconnect. The second phone shows the red banner; **Resolve** opens the red/green Local vs Remote diff; **Combine both**, edit the result if you like, **Resolve conflict**. Both phones end up identical.
 6. **1:45** - Hold on the final state; end.
 
-A scheduled run records this automatically into `~/Projects/fieldnotes-demo/fieldnotes-demo.mp4`; review it, then upload it publicly to YouTube/Vimeo.
+The video has short captions (no audio needed) and a 5 s end card saying "Works on iPhone and on the web" with a QR code to the live web app. `tools/demo/make_video.sh` builds it from two simulator recordings (see `tools/demo/README.md`); a scheduled run produces `~/Projects/fieldnotes-demo/fieldnotes-demo.mp4`. Review it, then upload it as a **public YouTube or Vimeo** video (GitHub hosting is not accepted by the rules) and paste the link in the form. Keep the total under 2:00, end card included.
 
 ## Submission checklist (all required items)
 - [ ] Demo video < 2 min, public on YouTube or Vimeo (link in the form)
