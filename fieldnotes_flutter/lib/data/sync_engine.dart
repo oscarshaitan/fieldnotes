@@ -215,14 +215,21 @@ class SyncEngine {
       // The note must exist on the server first; it will after the next round.
       if (data == null || note == null || note.revision == 0) continue;
 
-      final String description;
       try {
-        description = await _client.sync.beginPhotoUpload(
-          photoId: photo.id,
-          noteId: photo.noteId,
-          mimeType: photo.mimeType,
-          byteSize: data.lengthInBytes,
-        );
+        if (kIsWeb) {
+          // Browsers cannot always upload straight to the storage bucket
+          // (CORS), so the bytes go through the API instead.
+          await _client.sync.uploadPhotoData(
+            photoId: photo.id,
+            noteId: photo.noteId,
+            mimeType: photo.mimeType,
+            data: data,
+          );
+        } else {
+          await _uploadDirectly(photo, data);
+        }
+        await _db.savePhoto(photo.copyWith(uploaded: true));
+        onChanged();
       } on ServerpodClientUnauthorized {
         rethrow;
       } on ServerpodClientNetworkException {
@@ -234,32 +241,34 @@ class SyncEngine {
         lastError = 'Photo rejected by the server: ${e.message}';
         photoFailures++;
         await _db.removePhoto(photo.id);
-        continue;
-      }
-
-      // From here on a failure is about moving the bytes or verifying them.
-      // Keep the photo, report it, and carry on with the rest of the sync so
-      // one bad upload never blocks notes.
-      try {
-        final result = await uploadWithDescription(
-          description,
-          Uint8List.sublistView(data),
-          photo.mimeType,
-        );
-        if (!result.ok) {
-          throw StateError('storage rejected the upload ($result)');
-        }
-        await _client.sync.completePhotoUpload(photo.id);
-        await _db.savePhoto(photo.copyWith(uploaded: true));
-        onChanged();
-      } on ServerpodClientUnauthorized {
-        rethrow;
       } catch (e) {
+        // Moving the bytes failed. Keep the photo and report it, but carry on
+        // with the rest of the sync so one bad upload never blocks notes.
         debugPrint('Photo upload failed for ${photo.id}: $e');
         lastError = 'Photo upload failed: $e';
         photoFailures++;
       }
     }
+  }
+
+  /// Mobile/desktop path: the server issues an upload description, the app
+  /// sends the bytes straight to file storage, then the server verifies them.
+  Future<void> _uploadDirectly(LocalPhoto photo, ByteData data) async {
+    final description = await _client.sync.beginPhotoUpload(
+      photoId: photo.id,
+      noteId: photo.noteId,
+      mimeType: photo.mimeType,
+      byteSize: data.lengthInBytes,
+    );
+    final result = await uploadWithDescription(
+      description,
+      Uint8List.sublistView(data),
+      photo.mimeType,
+    );
+    if (!result.ok) {
+      throw StateError('storage rejected the upload ($result)');
+    }
+    await _client.sync.completePhotoUpload(photo.id);
   }
 
   // --- Pull ----------------------------------------------------------------
