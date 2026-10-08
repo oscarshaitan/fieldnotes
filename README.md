@@ -14,7 +14,7 @@ Built for the [Build Something Real Serverpod hackathon](https://builderbase.com
 | --- | --- |
 | **Offline notes + photos** | Everything is written to an on-device SQLite database first. No network needed to create, edit, delete or attach photos. |
 | **Sync** | A background engine pushes local changes, uploads photos, and pulls everything new using a per-user cursor. Runs on connectivity changes, after edits and every few seconds. |
-| **Conflict resolution** | Edits carry the revision (and content) they were based on. If the note moved on, the server does a **three-way, line-level merge**. Non-overlapping edits are merged silently; real conflicts are shown side by side so you can *keep mine*, *keep the other device's*, or *keep both*. |
+| **Conflict resolution** | Edits carry the revision (and content) they were based on. If the note moved on, the server does a **three-way, line-level merge**. Non-overlapping edits are merged silently; real conflicts open a **GitHub-style diff** (local vs remote, changed words highlighted) where you start from *Use local*, *Use remote* or *Combine both*, edit the result freely, and resolve with one button. |
 | **Mobile + web** | One Flutter codebase. Phones get a list/detail flow with camera and gallery; wide screens (web, tablets) get a two-pane layout. |
 | **Auth** | Serverpod email authentication. Your notes are private to your account. |
 
@@ -88,7 +88,7 @@ No Docker is needed: in development Serverpod runs an embedded PostgreSQL.
 1. Sign in with the same account on two clients (e.g. web and a simulator) and create a note.
 2. Stop the server (or go offline) and edit the note on both clients - different lines on each, and add a photo on one.
 3. Start the server again. Both edits are merged and the photo appears on the other client.
-4. Repeat, but edit the *same line* on both. The second device to sync shows a conflict banner; open it and choose.
+4. Repeat, but edit the *same line* on both. The second device to sync shows a conflict banner; open it, compare the diff, pick a starting point (or edit the result) and press *Resolve conflict*.
 
 ### Web: on-device database assets
 
