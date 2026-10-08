@@ -84,7 +84,17 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, _) {
         final list = Column(
           children: [
-            _SearchField(onChanged: (v) => setState(() => _query = v)),
+            _SearchField(
+              onChanged: (v) => setState(() => _query = v),
+              // Wide screens have no floating button over the editor.
+              trailing: wide
+                  ? FilledButton.icon(
+                      onPressed: () => _newNote(wide),
+                      icon: const Icon(Icons.add),
+                      label: const Text('New'),
+                    )
+                  : null,
+            ),
             Expanded(
               child: NoteList(
                 repository: _repo,
@@ -138,11 +148,13 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 12),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _newNote(wide),
-            icon: const Icon(Icons.add),
-            label: const Text('New note'),
-          ),
+          floatingActionButton: wide
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () => _newNote(wide),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New note'),
+                ),
           body: wide
               ? Row(
                   children: [
@@ -190,37 +202,41 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _SearchField extends StatelessWidget {
-  const _SearchField({required this.onChanged});
+  const _SearchField({required this.onChanged, this.trailing});
 
   final ValueChanged<String> onChanged;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    OutlineInputBorder border(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: color, width: width),
+        );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: TextField(
-        onChanged: onChanged,
-        textInputAction: TextInputAction.search,
-        decoration: InputDecoration(
-          hintText: 'Search notes',
-          prefixIcon: const Icon(Icons.search),
-          filled: true,
-          fillColor: scheme.surfaceContainerLowest,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: scheme.outlineVariant),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              onChanged: onChanged,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Search notes',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: scheme.surfaceContainerLowest,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                border: border(scheme.outlineVariant),
+                enabledBorder: border(scheme.outlineVariant),
+                focusedBorder: border(scheme.primary, 1.6),
+              ),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: scheme.outlineVariant),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: scheme.primary, width: 1.6),
-          ),
-        ),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+        ],
       ),
     );
   }
