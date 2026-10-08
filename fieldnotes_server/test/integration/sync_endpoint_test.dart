@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:fieldnotes_server/src/generated/protocol.dart';
 import 'package:serverpod/serverpod.dart';
 import 'package:test/test.dart';
@@ -357,6 +359,85 @@ void main() {
             noteId: const Uuid().v7obj(),
             mimeType: 'image/jpeg',
             byteSize: 100,
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
+
+    group('when a photo is uploaded through the API (web)', () {
+      ByteData bytes(int n) =>
+          ByteData.sublistView(Uint8List.fromList(List.filled(n, 7)));
+
+      test(
+        'then it is published, pulled by other devices and readable',
+        () async {
+          final noteId = const Uuid().v7obj();
+          await create(noteId, 'with photo', '');
+          final photoId = const Uuid().v7obj();
+
+          final photo = await endpoints.sync.uploadPhotoData(
+            alice,
+            photoId: photoId,
+            noteId: noteId,
+            mimeType: 'image/jpeg',
+            data: bytes(2048),
+          );
+          expect(photo.uploaded, isTrue);
+          expect(photo.seq, isNotNull);
+
+          final pulled = await endpoints.sync.pull(alice, 0, 200);
+          expect(pulled.photos.map((p) => p.id), [photoId]);
+
+          final data = await endpoints.sync.getPhotoData(alice, photoId);
+          expect(data.lengthInBytes, 2048);
+        },
+      );
+
+      test(
+        'then repeating the upload does not create a second change',
+        () async {
+          final noteId = const Uuid().v7obj();
+          await create(noteId, 't', '');
+          final photoId = const Uuid().v7obj();
+          Future<Photo> upload() => endpoints.sync.uploadPhotoData(
+            alice,
+            photoId: photoId,
+            noteId: noteId,
+            mimeType: 'image/png',
+            data: bytes(100),
+          );
+          final first = await upload();
+          final second = await upload();
+          expect(second.seq, first.seq);
+        },
+      );
+
+      test('then another user cannot upload to my note', () async {
+        final noteId = const Uuid().v7obj();
+        await create(noteId, 'mine', '');
+        await expectLater(
+          endpoints.sync.uploadPhotoData(
+            bob,
+            photoId: const Uuid().v7obj(),
+            noteId: noteId,
+            mimeType: 'image/jpeg',
+            data: bytes(10),
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('then an empty or non-image payload is rejected', () async {
+        final noteId = const Uuid().v7obj();
+        await create(noteId, 't', '');
+        await expectLater(
+          endpoints.sync.uploadPhotoData(
+            alice,
+            photoId: const Uuid().v7obj(),
+            noteId: noteId,
+            mimeType: 'text/html',
+            data: bytes(10),
           ),
           throwsA(isA<ArgumentError>()),
         );

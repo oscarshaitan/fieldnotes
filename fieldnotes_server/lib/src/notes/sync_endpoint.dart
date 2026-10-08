@@ -190,70 +190,66 @@ class SyncEndpoint extends Endpoint {
     required int byteSize,
   }) async {
     final userId = _userId(session);
-    if (!_allowedMimeTypes.contains(mimeType)) {
-      throw ArgumentError('Unsupported image type.');
-    }
-    if (byteSize <= 0 || byteSize > _maxPhotoBytes) {
-      throw ArgumentError('Photo is too large.');
-    }
-    final note = await Note.db.findById(session, noteId);
-    if (note == null || note.userId != userId) {
-      throw ArgumentError('Unknown note.');
-    }
+    final path = await _ensurePhotoRow(
+      session,
+      userId,
+      photoId: photoId,
+      noteId: noteId,
+      mimeType: mimeType,
+      byteSize: byteSize,
+    );
 
-    final path = 'photos/$userId/$photoId';
-    final existing = await Photo.db.findById(session, photoId);
-    if (existing == null) {
-      await Photo.db.insertRow(
-        session,
-        Photo(
-          id: photoId,
-          userId: userId,
-          noteId: noteId,
-          mimeType: mimeType,
-          byteSize: byteSize,
-          storagePath: path,
-          createdAt: DateTime.now().toUtc(),
-        ),
-      );
-    } else if (existing.userId != userId) {
-      throw ArgumentError('Photo belongs to another user.');
-    }
-
-    final description = await session.storage.createUploadDescription(
+    return session.storage.createUploadDescription(
       storageId: _storageId,
       path: path,
     );
-    return description;
   }
 
   /// Step 2: after the bytes are uploaded, verify them and publish the photo
   /// to the user's other devices.
   Future<Photo> completePhotoUpload(Session session, UuidValue photoId) async {
     final userId = _userId(session);
-    return session.db.transaction((tx) async {
-      final counter = await _lockCounter(session, userId, tx);
-      final photo = await Photo.db.findById(session, photoId, transaction: tx);
-      if (photo == null || photo.userId != userId) {
-        throw ArgumentError('Unknown photo.');
-      }
-      if (photo.uploaded) return photo;
+    final photo = await Photo.db.findById(session, photoId);
+    if (photo == null || photo.userId != userId) {
+      throw ArgumentError('Unknown photo.');
+    }
+    if (photo.uploaded) return photo;
 
-      final ok = await session.storage.verifyUpload(
-        storageId: _storageId,
-        path: photo.storagePath,
-      );
-      if (!ok) throw StateError('Upload could not be verified.');
+    final ok = await session.storage.verifyUpload(
+      storageId: _storageId,
+      path: photo.storagePath,
+    );
+    if (!ok) throw StateError('Upload could not be verified.');
+    return _publishPhoto(session, userId, photoId);
+  }
 
-      return Photo.db.updateRow(
-        session,
-        photo.copyWith(
-          uploaded: true,
-          seq: await _nextSeq(session, counter, tx),
-        ),
-        transaction: tx,
-      );
-    });
+  /// Uploads a photo through the API instead of directly to file storage.
+  ///
+  /// Browsers cannot always upload straight to the storage bucket (CORS), so
+  /// the web app uses this. Mobile apps use [beginPhotoUpload] and
+  /// [completePhotoUpload] to send the bytes directly. Safe to repeat.
+  Future<Photo> uploadPhotoData(
+    Session session, {
+    required UuidValue photoId,
+    required UuidValue noteId,
+    required String mimeType,
+    required ByteData data,
+  }) async {
+    final userId = _userId(session);
+    final path = await _ensurePhotoRow(
+      session,
+      userId,
+      photoId: photoId,
+      noteId: noteId,
+      mimeType: mimeType,
+      byteSize: data.lengthInBytes,
+    );
+    await session.storage.storeFile(
+      storageId: _storageId,
+      path: path,
+      byteData: data,
+    );
+    return _publishPhoto(session, userId, photoId);
   }
 
   /// Removes a photo; the deletion propagates to other devices on pull.
@@ -304,6 +300,73 @@ class SyncEndpoint extends Endpoint {
   }
 
   // --- Helpers -------------------------------------------------------------
+
+  /// Validates a photo and makes sure its (not yet published) row exists.
+  /// Returns the storage path.
+  Future<String> _ensurePhotoRow(
+    Session session,
+    UuidValue userId, {
+    required UuidValue photoId,
+    required UuidValue noteId,
+    required String mimeType,
+    required int byteSize,
+  }) async {
+    if (!_allowedMimeTypes.contains(mimeType)) {
+      throw ArgumentError('Unsupported image type.');
+    }
+    if (byteSize <= 0 || byteSize > _maxPhotoBytes) {
+      throw ArgumentError('Photo is too large.');
+    }
+    final note = await Note.db.findById(session, noteId);
+    if (note == null || note.userId != userId) {
+      throw ArgumentError('Unknown note.');
+    }
+
+    final path = 'photos/$userId/$photoId';
+    final existing = await Photo.db.findById(session, photoId);
+    if (existing == null) {
+      await Photo.db.insertRow(
+        session,
+        Photo(
+          id: photoId,
+          userId: userId,
+          noteId: noteId,
+          mimeType: mimeType,
+          byteSize: byteSize,
+          storagePath: path,
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
+    } else if (existing.userId != userId) {
+      throw ArgumentError('Photo belongs to another user.');
+    }
+    return path;
+  }
+
+  /// Marks a stored photo as uploaded and assigns it a sync position so other
+  /// devices pick it up.
+  Future<Photo> _publishPhoto(
+    Session session,
+    UuidValue userId,
+    UuidValue photoId,
+  ) {
+    return session.db.transaction((tx) async {
+      final counter = await _lockCounter(session, userId, tx);
+      final photo = await Photo.db.findById(session, photoId, transaction: tx);
+      if (photo == null || photo.userId != userId) {
+        throw ArgumentError('Unknown photo.');
+      }
+      if (photo.uploaded) return photo;
+      return Photo.db.updateRow(
+        session,
+        photo.copyWith(
+          uploaded: true,
+          seq: await _nextSeq(session, counter, tx),
+        ),
+        transaction: tx,
+      );
+    });
+  }
 
   void _validate(NoteChange change) {
     if (change.title.length > _maxTitleLength ||

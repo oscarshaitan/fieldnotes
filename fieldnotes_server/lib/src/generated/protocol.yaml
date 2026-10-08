@@ -14,5 +14,6 @@ sync:
   - pull:
   - beginPhotoUpload:
   - completePhotoUpload:
+  - uploadPhotoData:
   - deletePhoto:
   - getPhotoData:

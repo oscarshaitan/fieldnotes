@@ -10,6 +10,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'dart:typed_data' as _idt;
 import 'package:fieldnotes_server/src/generated/notes/note_change.dart'
     as _icmwf49r;
 import 'package:serverpod/serverpod.dart' as _is;
@@ -350,6 +351,43 @@ class Endpoints extends _is.EndpointDispatch {
                   .completePhotoUpload(
                     session,
                     params['photoId'],
+                  ),
+        ),
+        'uploadPhotoData': _is.MethodConnector(
+          name: 'uploadPhotoData',
+          params: {
+            'photoId': _is.ParameterDescription(
+              name: 'photoId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'noteId': _is.ParameterDescription(
+              name: 'noteId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'mimeType': _is.ParameterDescription(
+              name: 'mimeType',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'data': _is.ParameterDescription(
+              name: 'data',
+              type: _is.getType<_idt.ByteData>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['sync'] as _il6him71.SyncEndpoint).uploadPhotoData(
+                    session,
+                    photoId: params['photoId'],
+                    noteId: params['noteId'],
+                    mimeType: params['mimeType'],
+                    data: params['data'],
                   ),
         ),
         'deletePhoto': _is.MethodConnector(

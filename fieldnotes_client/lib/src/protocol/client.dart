@@ -317,6 +317,27 @@ class EndpointSync extends _isc.EndpointRef {
         {'photoId': photoId},
       );
 
+  /// Uploads a photo through the API instead of directly to file storage.
+  ///
+  /// Browsers cannot always upload straight to the storage bucket (CORS), so
+  /// the web app uses this. Mobile apps use [beginPhotoUpload] and
+  /// [completePhotoUpload] to send the bytes directly. Safe to repeat.
+  _ida.Future<_i5rb9t65.Photo> uploadPhotoData({
+    required _isc.UuidValue photoId,
+    required _isc.UuidValue noteId,
+    required String mimeType,
+    required _idt.ByteData data,
+  }) => caller.callServerEndpoint<_i5rb9t65.Photo>(
+    'sync',
+    'uploadPhotoData',
+    {
+      'photoId': photoId,
+      'noteId': noteId,
+      'mimeType': mimeType,
+      'data': data,
+    },
+  );
+
   /// Removes a photo; the deletion propagates to other devices on pull.
   _ida.Future<void> deletePhoto(_isc.UuidValue photoId) =>
       caller.callServerEndpoint<void>(

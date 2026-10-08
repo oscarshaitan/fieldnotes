@@ -651,6 +651,45 @@ class _SyncEndpoint {
     });
   }
 
+  _ida.Future<_i5zo1zp2.Photo> uploadPhotoData(
+    _ist.TestSessionBuilder sessionBuilder, {
+    required _is.UuidValue photoId,
+    required _is.UuidValue noteId,
+    required String mimeType,
+    required _idt.ByteData data,
+  }) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'sync',
+            method: 'uploadPhotoData',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'sync',
+          methodName: 'uploadPhotoData',
+          parameters: _ist.testObjectToJson({
+            'photoId': photoId,
+            'noteId': noteId,
+            'mimeType': mimeType,
+            'data': data,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i5zo1zp2.Photo>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
   _ida.Future<void> deletePhoto(
     _ist.TestSessionBuilder sessionBuilder,
     _is.UuidValue photoId,
