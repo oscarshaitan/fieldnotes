@@ -57,8 +57,7 @@ class _NotePhotosState extends State<_NotePhotos> {
   }
 
   Future<void> _reload() async {
-    final version = widget.repository.photosVersion;
-    _loadedVersion = version;
+    _loadedVersion = widget.repository.photosVersion;
     final photos = await widget.repository.photosFor(widget.noteId);
     if (!mounted) return;
     setState(() => _photos = photos);
@@ -68,49 +67,147 @@ class _NotePhotosState extends State<_NotePhotos> {
   Widget build(BuildContext context) => widget.builder(context, _photos);
 }
 
-/// Small preview of a note's first photo, or a note icon when it has none.
-class PhotoThumb extends StatelessWidget {
-  const PhotoThumb({super.key, required this.repository, required this.noteId});
+/// Wide cover image for a note card; nothing when the note has no photos.
+class PhotoCover extends StatelessWidget {
+  const PhotoCover({
+    super.key,
+    required this.repository,
+    required this.noteId,
+    this.height = 132,
+  });
 
   final NotesRepository repository;
   final UuidValue noteId;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return SizedBox.square(
-      dimension: 52,
-      child: _NotePhotos(
-        repository: repository,
-        noteId: noteId,
-        builder: (context, photos) {
-          final withData = photos.where((p) => p.data != null);
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: withData.isEmpty
-                ? ColoredBox(
-                    color: scheme.surfaceContainerHighest,
-                    child: Icon(
-                      photos.isEmpty ? Icons.notes : Icons.image_outlined,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  )
-                : Image.memory(
-                    _bytesOf(withData.first),
-                    fit: BoxFit.cover,
-                    cacheWidth: 160,
-                    gaplessPlayback: true,
+    return _NotePhotos(
+      repository: repository,
+      noteId: noteId,
+      builder: (context, photos) {
+        if (photos.isEmpty) return const SizedBox.shrink();
+        final withData = photos.where((p) => p.data != null).toList();
+        return SizedBox(
+          height: height,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (withData.isEmpty)
+                ColoredBox(
+                  color: scheme.surfaceContainerLow,
+                  child: Icon(
+                    Icons.image_outlined,
+                    color: scheme.onSurfaceVariant,
                   ),
-          );
-        },
+                )
+              else
+                Image.memory(
+                  _bytesOf(withData.first),
+                  fit: BoxFit.cover,
+                  cacheWidth: 700,
+                  gaplessPlayback: true,
+                ),
+              if (photos.length > 1)
+                Positioned(
+                  right: 10,
+                  bottom: 10,
+                  child: _Pill(
+                    icon: Icons.photo_library_outlined,
+                    label: '${photos.length}',
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Horizontal strip of a note's photos with add / remove actions.
-class PhotoStrip extends StatelessWidget {
-  const PhotoStrip({
+bool get canUseCamera =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.android);
+
+String _mimeType(XFile file) {
+  const supported = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'};
+  final declared = file.mimeType;
+  if (declared != null && supported.contains(declared)) return declared;
+  final name = file.name.toLowerCase();
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.webp')) return 'image/webp';
+  if (name.endsWith('.gif')) return 'image/gif';
+  return 'image/jpeg';
+}
+
+/// Picks an image from the camera or gallery and attaches it to the note.
+Future<void> pickPhoto(
+  BuildContext context,
+  NotesRepository repository,
+  UuidValue noteId,
+  ImageSource source,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final file = await ImagePicker().pickImage(
+      source: source,
+      // Keep photos small enough to sync quickly on a bad connection.
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 80,
+    );
+    if (file == null) return;
+    await repository.addPhoto(
+      noteId,
+      await file.readAsBytes(),
+      _mimeType(file),
+    );
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('Could not add photo: $e')));
+  }
+}
+
+/// A note's photos as a horizontal gallery; hidden when there are none.
+class PhotoGallery extends StatelessWidget {
+  const PhotoGallery({
     super.key,
     required this.repository,
     required this.noteId,
@@ -121,117 +218,42 @@ class PhotoStrip extends StatelessWidget {
   final UuidValue noteId;
   final bool enabled;
 
-  bool get _canUseCamera =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.android);
-
-  Future<void> _pick(BuildContext context, ImageSource source) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final file = await ImagePicker().pickImage(
-        source: source,
-        // Keep photos small enough to sync quickly on a bad connection.
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 80,
-      );
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
-      await repository.addPhoto(noteId, bytes, _mimeType(file));
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Could not add photo: $e')),
-      );
-    }
-  }
-
-  String _mimeType(XFile file) {
-    final declared = file.mimeType;
-    if (declared != null && declared.startsWith('image/')) {
-      const supported = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'};
-      if (supported.contains(declared)) return declared;
-    }
-    final name = file.name.toLowerCase();
-    if (name.endsWith('.png')) return 'image/png';
-    if (name.endsWith('.webp')) return 'image/webp';
-    if (name.endsWith('.gif')) return 'image/gif';
-    return 'image/jpeg';
-  }
-
   @override
   Widget build(BuildContext context) {
     return _NotePhotos(
       repository: repository,
       noteId: noteId,
       builder: (context, photos) {
+        if (photos.isEmpty) return const SizedBox.shrink();
+        final viewable = photos.where((p) => p.data != null).toList();
         return SizedBox(
-          height: 104,
-          child: ListView(
+          height: 148,
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              if (_canUseCamera)
-                _AddTile(
-                  icon: Icons.photo_camera_outlined,
-                  label: 'Camera',
-                  onTap: enabled
-                      ? () => _pick(context, ImageSource.camera)
-                      : null,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: photos.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) => _PhotoTile(
+              key: ValueKey(photos[i].id),
+              repository: repository,
+              photo: photos[i],
+              enabled: enabled,
+              onOpen: () => Navigator.of(context).push(
+                PageRouteBuilder<void>(
+                  opaque: false,
+                  barrierColor: Colors.black87,
+                  pageBuilder: (_, _, _) => _PhotoViewer(
+                    photos: viewable,
+                    initial: viewable.indexWhere((p) => p.id == photos[i].id),
+                  ),
+                  transitionsBuilder: (_, animation, _, child) =>
+                      FadeTransition(opacity: animation, child: child),
                 ),
-              _AddTile(
-                icon: Icons.add_photo_alternate_outlined,
-                label: _canUseCamera ? 'Gallery' : 'Add photo',
-                onTap: enabled
-                    ? () => _pick(context, ImageSource.gallery)
-                    : null,
               ),
-              for (final photo in photos)
-                _PhotoTile(
-                  key: ValueKey(photo.id),
-                  repository: repository,
-                  photo: photo,
-                  enabled: enabled,
-                ),
-            ],
+            ),
           ),
         );
       },
-    );
-  }
-}
-
-class _AddTile extends StatelessWidget {
-  const _AddTile({required this.icon, required this.label, this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
-      child: Material(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: SizedBox(
-            width: 88,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon),
-                const SizedBox(height: 4),
-                Text(label, style: Theme.of(context).textTheme.labelSmall),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -242,77 +264,70 @@ class _PhotoTile extends StatelessWidget {
     required this.repository,
     required this.photo,
     required this.enabled,
+    required this.onOpen,
   });
 
   final NotesRepository repository;
   final LocalPhoto photo;
   final bool enabled;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final data = photo.data;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
+    return SizedBox(
+      width: 148,
+      height: 148,
       child: Stack(
+        fit: StackFit.expand,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              width: 96,
-              height: 96,
-              child: data == null
-                  // Taken on another device, bytes still downloading.
-                  ? ColoredBox(
-                      color: scheme.surfaceContainerHighest,
-                      child: const Center(
-                        child: SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    )
-                  : InkWell(
-                      onTap: () => showDialog<void>(
-                        context: context,
-                        builder: (_) => _PhotoViewer(bytes: _bytesOf(photo)),
-                      ),
-                      child: Image.memory(
-                        _bytesOf(photo),
-                        fit: BoxFit.cover,
-                        cacheWidth: 300,
-                        gaplessPlayback: true,
+            borderRadius: BorderRadius.circular(20),
+            child: data == null
+                // Taken on another device, bytes still downloading.
+                ? ColoredBox(
+                    color: scheme.surfaceContainerLow,
+                    child: const Center(
+                      child: SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-            ),
+                  )
+                : InkWell(
+                    onTap: onOpen,
+                    child: Image.memory(
+                      _bytesOf(photo),
+                      fit: BoxFit.cover,
+                      cacheWidth: 400,
+                      gaplessPlayback: true,
+                    ),
+                  ),
           ),
           if (!photo.uploaded)
-            Positioned(
-              left: 6,
-              bottom: 6,
-              child: Tooltip(
-                message: 'Waiting to upload',
-                child: CircleAvatar(
-                  radius: 10,
-                  backgroundColor: scheme.tertiaryContainer,
-                  child: Icon(
-                    Icons.cloud_upload_outlined,
-                    size: 13,
-                    color: scheme.onTertiaryContainer,
-                  ),
-                ),
+            const Positioned(
+              left: 8,
+              bottom: 8,
+              child: _Pill(
+                icon: Icons.cloud_upload_outlined,
+                label: 'Pending',
               ),
             ),
           if (enabled)
             Positioned(
-              right: 2,
-              top: 2,
-              child: InkWell(
-                onTap: () => repository.removePhoto(photo),
-                child: CircleAvatar(
-                  radius: 11,
-                  backgroundColor: Colors.black54,
-                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+              right: 6,
+              top: 6,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.55),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => repository.removePhoto(photo),
+                  child: const Padding(
+                    padding: EdgeInsets.all(5),
+                    child: Icon(Icons.close, size: 15, color: Colors.white),
+                  ),
                 ),
               ),
             ),
@@ -322,25 +337,66 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
-class _PhotoViewer extends StatelessWidget {
-  const _PhotoViewer({required this.bytes});
+/// Full-screen, swipeable photo viewer.
+class _PhotoViewer extends StatefulWidget {
+  const _PhotoViewer({required this.photos, required this.initial});
 
-  final Uint8List bytes;
+  final List<LocalPhoto> photos;
+  final int initial;
+
+  @override
+  State<_PhotoViewer> createState() => _PhotoViewerState();
+}
+
+class _PhotoViewerState extends State<_PhotoViewer> {
+  late final PageController _controller = PageController(
+    initialPage: widget.initial < 0 ? 0 : widget.initial,
+  );
+  late int _page = widget.initial < 0 ? 0 : widget.initial;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.black,
-      insetPadding: const EdgeInsets.all(12),
-      child: Stack(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
         children: [
-          InteractiveViewer(child: Image.memory(bytes, fit: BoxFit.contain)),
-          Positioned(
-            right: 4,
-            top: 4,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
+          PageView.builder(
+            controller: _controller,
+            itemCount: widget.photos.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (context, i) => InteractiveViewer(
+              child: Center(
+                child: Image.memory(
+                  _bytesOf(widget.photos[i]),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const Spacer(),
+                  if (widget.photos.length > 1)
+                    _Pill(
+                      icon: Icons.photo_library_outlined,
+                      label: '${_page + 1} / ${widget.photos.length}',
+                    ),
+                  const SizedBox(width: 8),
+                ],
+              ),
             ),
           ),
         ],
