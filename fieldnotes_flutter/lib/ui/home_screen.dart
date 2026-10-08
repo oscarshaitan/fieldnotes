@@ -2,6 +2,7 @@ import 'package:fieldnotes_client/fieldnotes_client.dart';
 import 'package:flutter/material.dart';
 
 import '../data/notes_repository.dart';
+import 'brand.dart';
 import 'note_editor.dart';
 import 'note_list.dart';
 import 'sync_chip.dart';
@@ -21,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _wideBreakpoint = 840.0;
 
   UuidValue? _selected;
+  String _query = '';
 
   NotesRepository get _repo => widget.repository;
 
@@ -76,33 +78,64 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= _wideBreakpoint;
+    final scheme = Theme.of(context).colorScheme;
     return ListenableBuilder(
       listenable: _repo,
       builder: (context, _) {
-        final list = NoteList(
-          repository: _repo,
-          selectedId: wide ? _selected : null,
-          onSelect: (id) => _open(id, wide),
+        final list = Column(
+          children: [
+            _SearchField(onChanged: (v) => setState(() => _query = v)),
+            Expanded(
+              child: NoteList(
+                repository: _repo,
+                selectedId: wide ? _selected : null,
+                onSelect: (id) => _open(id, wide),
+                onCreate: () => _newNote(wide),
+                query: _query,
+              ),
+            ),
+          ],
         );
         return Scaffold(
           appBar: AppBar(
+            toolbarHeight: 64,
+            titleSpacing: 16,
             title: const Row(
               children: [
-                Icon(Icons.edit_note),
-                SizedBox(width: 8),
+                BrandMark(size: 34),
+                SizedBox(width: 10),
                 Text('FieldNotes'),
               ],
             ),
             actions: [
               SyncChip(repository: _repo),
+              const SizedBox(width: 6),
               PopupMenuButton<void>(
                 tooltip: 'Account',
-                icon: const Icon(Icons.account_circle_outlined),
+                offset: const Offset(0, 44),
+                icon: CircleAvatar(
+                  radius: 17,
+                  backgroundColor: scheme.primaryContainer,
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 20,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
                 itemBuilder: (context) => [
-                  PopupMenuItem(onTap: _signOut, child: const Text('Sign out')),
+                  PopupMenuItem(
+                    onTap: _signOut,
+                    child: const Row(
+                      children: [
+                        Icon(Icons.logout, size: 20),
+                        SizedBox(width: 12),
+                        Text('Sign out'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
@@ -113,9 +146,9 @@ class _HomeScreenState extends State<HomeScreen> {
           body: wide
               ? Row(
                   children: [
-                    SizedBox(width: 380, child: list),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: _detailPane()),
+                    SizedBox(width: 400, child: list),
+                    VerticalDivider(color: scheme.outlineVariant),
+                    Expanded(child: _detailPane(context)),
                   ],
                 )
               : list,
@@ -124,10 +157,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _detailPane() {
+  Widget _detailPane(BuildContext context) {
     final id = _selected;
+    final scheme = Theme.of(context).colorScheme;
     if (id == null) {
-      return const Center(child: Text('Select or create a note'));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.article_outlined, size: 56, color: scheme.outline),
+            const SizedBox(height: 12),
+            Text(
+              'Select a note or create a new one',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
     }
     return NoteEditor(
       key: ValueKey(id),
@@ -137,6 +185,43 @@ class _HomeScreenState extends State<HomeScreen> {
       onClosed: () {
         if (mounted && _selected == id) setState(() => _selected = null);
       },
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.onChanged});
+
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: TextField(
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Search notes',
+          prefixIcon: const Icon(Icons.search),
+          filled: true,
+          fillColor: scheme.surfaceContainerLowest,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: scheme.outlineVariant),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: scheme.outlineVariant),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: scheme.primary, width: 1.6),
+          ),
+        ),
+      ),
     );
   }
 }
