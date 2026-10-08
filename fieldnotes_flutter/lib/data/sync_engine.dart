@@ -45,6 +45,15 @@ class SyncEngine {
   /// but never block syncing of notes.
   int photoFailures = 0;
 
+  bool _photosChanged = false;
+
+  /// Whether photos were added, removed or updated since the last call.
+  bool takePhotosChanged() {
+    final changed = _photosChanged;
+    _photosChanged = false;
+    return changed;
+  }
+
   bool _running = false;
   bool _again = false;
 
@@ -71,7 +80,10 @@ class SyncEngine {
       status.value = SyncStatus.signedOut;
       return;
     }
-    status.value = SyncStatus.syncing;
+    // Background polling should not flash "Syncing…" when nothing is pending.
+    if (status.value != SyncStatus.synced || await _db.pendingCount() > 0) {
+      status.value = SyncStatus.syncing;
+    }
     photoFailures = 0;
     try {
       await _bindToAccount();
@@ -107,6 +119,7 @@ class SyncEngine {
     if (await _db.hasData()) {
       debugPrint('Local data belongs to another account/server; resetting.');
       await _db.wipe();
+      _photosChanged = true;
     }
     await _db.saveOwner(owner);
     onChanged();
@@ -205,6 +218,7 @@ class SyncEngine {
         await _client.sync.deletePhoto(photo.id);
       }
       await _db.removePhoto(photo.id);
+      _photosChanged = true;
     }
   }
 
@@ -229,6 +243,7 @@ class SyncEngine {
           await _uploadDirectly(photo, data);
         }
         await _db.savePhoto(photo.copyWith(uploaded: true));
+        _photosChanged = true;
         onChanged();
       } on ServerpodClientUnauthorized {
         rethrow;
@@ -241,6 +256,7 @@ class SyncEngine {
         lastError = 'Photo rejected by the server: ${e.message}';
         photoFailures++;
         await _db.removePhoto(photo.id);
+        _photosChanged = true;
       } catch (e) {
         // Moving the bytes failed. Keep the photo and report it, but carry on
         // with the rest of the sync so one bad upload never blocks notes.
@@ -317,6 +333,14 @@ class SyncEngine {
       // Local edits pending. The push will merge, or flag a conflict. For an
       // already flagged conflict, keep the shown server version fresh.
       if (local.conflict) {
+        if (!remote.deleted &&
+            remote.title == local.title &&
+            remote.body == local.body) {
+          // The other side ended up with exactly our text (for instance it
+          // resolved the conflict by keeping our version): nothing to decide.
+          await _db.saveNote(_cleanCopyOf(local, remote));
+          return;
+        }
         await _db.saveNote(
           local.copyWith(
             remoteRevision: remote.revision,
@@ -341,7 +365,10 @@ class SyncEngine {
   Future<void> _applyRemotePhoto(Photo remote) async {
     final local = await _db.photo(remote.id);
     if (remote.deleted) {
-      if (local != null) await _db.removePhoto(remote.id);
+      if (local != null) {
+        await _db.removePhoto(remote.id);
+        _photosChanged = true;
+      }
       return;
     }
     if (local == null) {
@@ -354,8 +381,10 @@ class SyncEngine {
           createdAt: remote.createdAt,
         ),
       );
+      _photosChanged = true;
     } else if (!local.uploaded) {
       await _db.savePhoto(local.copyWith(uploaded: true));
+      _photosChanged = true;
     }
   }
 
@@ -365,6 +394,7 @@ class SyncEngine {
       final current = await _db.photo(photo.id);
       if (current == null) continue; // deleted meanwhile
       await _db.savePhoto(current.copyWith(data: data));
+      _photosChanged = true;
       onChanged();
     }
   }
