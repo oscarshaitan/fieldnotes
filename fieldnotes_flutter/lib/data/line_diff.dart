@@ -293,3 +293,9 @@ List<_Op> _diff<T>(List<T> a, List<T> b) {
   }
   return ops;
 }
+
+/// Both versions together, like GitHub's "accept both changes": lines that
+/// both sides share appear once, and in a changed block the remote lines come
+/// first, followed by the local ones.
+String combineBoth(String remote, String local) =>
+    diffText(remote, local).unified.map((l) => l.text).join('\n');

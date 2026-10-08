@@ -88,4 +88,20 @@ void main() {
       expect(d.rows[2].right, isNull);
     });
   });
+
+  group('combineBoth', () {
+    test('keeps shared lines once and both sides of a changed line', () {
+      expect(combineBoth('a\nremote\nc', 'a\nlocal\nc'), 'a\nremote\nlocal\nc');
+    });
+
+    test('keeps additions from either side', () {
+      expect(combineBoth('a\nb', 'a'), 'a\nb');
+      expect(combineBoth('a', 'a\nb'), 'a\nb');
+    });
+
+    test('identical text is unchanged and empty stays empty', () {
+      expect(combineBoth('x\ny', 'x\ny'), 'x\ny');
+      expect(combineBoth('', ''), '');
+    });
+  });
 }
