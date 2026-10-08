@@ -14,9 +14,6 @@ enum ConflictChoice {
 
   /// Discard the local edits and take the remote version.
   remote,
-
-  /// Take the remote version and keep the local one as a separate note.
-  both,
 }
 
 /// Everything the UI needs: local notes and photos (always available, even
@@ -206,6 +203,43 @@ class NotesRepository extends ChangeNotifier {
 
   // --- Conflicts -----------------------------------------------------------
 
+  /// Resolves a conflict where both sides edited the note, using the final
+  /// [title] and [body] the user settled on (one of the versions, both
+  /// combined, or hand-edited text).
+  Future<void> resolveWithContent(
+    UuidValue id, {
+    required String title,
+    required String body,
+  }) async {
+    final note = await _db.note(id);
+    if (note == null || !note.conflict) return;
+    final remoteTitle = note.remoteTitle ?? '';
+    final remoteBody = note.remoteBody ?? '';
+    await _db.saveNote(
+      note.copyWith(
+        title: title,
+        body: body,
+        // Rebase onto the remote version, so the next push is a plain
+        // fast-forward carrying exactly this result.
+        revision: note.remoteRevision ?? note.revision,
+        baseTitle: remoteTitle,
+        baseBody: remoteBody,
+        deleted: false,
+        dirty: title != remoteTitle || body != remoteBody,
+        conflict: false,
+        remoteRevision: null,
+        remoteTitle: null,
+        remoteBody: null,
+        remoteDeleted: null,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+    await _refresh();
+    _scheduleSync();
+  }
+
+  /// Resolves a delete-versus-edit conflict by keeping the [ConflictChoice.local]
+  /// or the [ConflictChoice.remote] outcome.
   Future<void> resolveConflict(UuidValue id, ConflictChoice choice) async {
     final note = await _db.note(id);
     if (note == null || !note.conflict) return;
@@ -214,11 +248,10 @@ class NotesRepository extends ChangeNotifier {
     final remoteBody = note.remoteBody ?? '';
     final remoteRevision = note.remoteRevision ?? note.revision;
     final remoteDeleted = note.remoteDeleted ?? false;
-    final now = DateTime.now().toUtc();
 
     if (choice == ConflictChoice.local) {
-      // Rebase onto the server version; the next push is then a plain
-      // fast-forward that overwrites it with ours.
+      // Rebase onto the remote version; the next push is then a plain
+      // fast-forward that applies the local outcome (edit or delete).
       await _db.saveNote(
         note.copyWith(
           revision: remoteRevision,
@@ -230,44 +263,28 @@ class NotesRepository extends ChangeNotifier {
           remoteBody: null,
           remoteDeleted: null,
           dirty: true,
-          updatedAt: now,
+          updatedAt: DateTime.now().toUtc(),
         ),
       );
+    } else if (remoteDeleted) {
+      await _db.removeNote(id);
     } else {
-      if (choice == ConflictChoice.both && !note.deleted) {
-        await _db.saveNote(
-          LocalNote(
-            id: const Uuid().v7obj(),
-            title: note.title.isEmpty
-                ? 'Local version'
-                : '${note.title} (local)',
-            body: note.body,
-            dirty: true,
-            createdAt: now,
-            updatedAt: now,
-          ),
-        );
-      }
-      if (remoteDeleted) {
-        await _db.removeNote(id);
-      } else {
-        await _db.saveNote(
-          note.copyWith(
-            title: remoteTitle,
-            body: remoteBody,
-            revision: remoteRevision,
-            baseTitle: remoteTitle,
-            baseBody: remoteBody,
-            deleted: false,
-            dirty: false,
-            conflict: false,
-            remoteRevision: null,
-            remoteTitle: null,
-            remoteBody: null,
-            remoteDeleted: null,
-          ),
-        );
-      }
+      await _db.saveNote(
+        note.copyWith(
+          title: remoteTitle,
+          body: remoteBody,
+          revision: remoteRevision,
+          baseTitle: remoteTitle,
+          baseBody: remoteBody,
+          deleted: false,
+          dirty: false,
+          conflict: false,
+          remoteRevision: null,
+          remoteTitle: null,
+          remoteBody: null,
+          remoteDeleted: null,
+        ),
+      );
     }
     await _refresh();
     _scheduleSync();
