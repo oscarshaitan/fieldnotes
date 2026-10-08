@@ -187,23 +187,17 @@ class _ConflictDialogState extends State<_ConflictDialog> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      Text('Note text', style: theme.textTheme.titleSmall),
-                      const SizedBox(height: 6),
-                      if (bodyChanged)
+                      if (bodyChanged) ...[
+                        Text('Note text', style: theme.textTheme.titleSmall),
+                        const SizedBox(height: 6),
                         DiffView(
                           oldText: remoteBody,
                           newText: note.body,
                           oldLabel: 'Other device',
                           newLabel: 'Your version',
                           split: split,
-                        )
-                      else
-                        Text(
-                          'No differences - the text is the same on both devices.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
                         ),
+                      ],
                     ] else
                       _DeletionSummary(note: note),
                     const SizedBox(height: 16),
